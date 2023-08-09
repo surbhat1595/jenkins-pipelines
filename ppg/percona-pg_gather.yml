@@ -1,0 +1,14 @@
+- job:
+    name: percona-pg_gather-RELEASE
+    project-type: pipeline
+    description: |
+        Do not edit this job through the web!
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+            - 'DISTPG-630'
+            wipe-workspace: false
+      lightweight-checkout: true
+      script-path: ppg/percona-pg_gather.groovy
