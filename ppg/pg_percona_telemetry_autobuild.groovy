@@ -1,7 +1,7 @@
 /* groovylint-disable DuplicateStringLiteral, GStringExpressionWithinString, LineLength */
 library changelog: false, identifier: "lib@master", retriever: modernSCM([
     $class: 'GitSCMSource',
-    remote: 'https://github.com/Percona-Lab/jenkins-pipelines.git'
+    remote: 'https://github.com/surbhat1595/jenkins-pipelines.git'
 ])
 
 void installCli(String PLATFORM) {
@@ -21,20 +21,20 @@ void installCli(String PLATFORM) {
         sudo ./aws/install || true
     """ 
 }
-
 void buildStage(String DOCKER_OS, String STAGE_PARAM) {
     sh """
-        echo "Docker: $DOCKER_OS, Release: PG$PG_RELEASE, Stage: $STAGE_PARAM"
         set -o xtrace
-        mkdir -p test
-        wget \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/main/percona-packaging/scripts/pg_percona_telemetry_builder.sh -O ppt_builder.sh || curl \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/main/percona-packaging/scripts/pg_percona_telemetry_builder.sh -o ppt_builder.sh
+        mkdir test
+        wget \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/${BRANCH}/percona-packaging/scripts/pg_percona_telemetry_builder.sh -O ppt_builder.sh
         pwd -P
+        ls -laR
         export build_dir=\$(pwd -P)
-        set -o xtrace
-        cd \${build_dir}
-        sudo bash -x ./ppt_builder.sh --builddir=\${build_dir}/test --pg_release=\${PG_RELEASE} --ppg_repo_name=\${PPG_REPO} --install_deps=1
-        bash -x ./ppt_builder.sh --builddir=\${build_dir}/test --version=\${VERSION} --branch=\${BRANCH} --repo=\${GIT_REPO} --rpm_release=\${RPM_RELEASE} --deb_release=\${DEB_RELEASE} --pg_release=\${PG_RELEASE} --ppg_repo_name=\${PPG_REPO} "$STAGE_PARAM"
-    """ 
+        docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
+            set -o xtrace
+            cd \${build_dir}
+            bash -x ./ppt_builder.sh --builddir=\${build_dir}/test --pg_release=\${PG_RELEASE} --ppg_repo_name=\${PPG_REPO} --install_deps=1
+            bash -x ./ppt_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --version=${VERSION} --branch=${BRANCH} --rpm_release=${RPM_RELEASE} --deb_release=${DEB_RELEASE} --pg_release=${PG_RELEASE} --ppg_repo_name=${PPG_REPO} ${STAGE_PARAM}"
+    """
 }
 
 void cleanUpWS() {
@@ -98,13 +98,12 @@ pipeline {
     stages {
         stage('Download source from github') {
             agent {
-               label 'min-focal-x64'
+               label 'docker'
             }
             steps {
                 echo '====> Source will be downloaded from github'
                 //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for PG${PG_RELEASE}, repo branch: ${BRANCH} - [${BUILD_URL}]")
                 cleanUpWS()
-                installCli("deb")
                 buildStage("ubuntu:focal", "--get_sources=1")
                 sh ''' 
                    REPO_UPLOAD_PATH=$(grep "UPLOAD" test/pg-percona-telemetry.properties | cut -d = -f 2 | sed "s:$:${BUILD_NUMBER}:")
@@ -128,13 +127,11 @@ pipeline {
             parallel {
                 stage('Source rpm') {
                     agent {
-                        label 'min-centos-7-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry generic source rpm"
                         cleanUpWS()
-                        installCli("rpm")
-                        unstash 'properties'
                         popArtifactFolder("source_tarball/", AWS_STASH_PATH)
                         buildStage("centos:7", "--build_src_rpm=1")
 
@@ -144,13 +141,11 @@ pipeline {
                 }
                 stage('Source deb') {
                     agent {
-                        label 'min-focal-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry generic source deb"
                         cleanUpWS()
-                        installCli("deb")
-                        unstash 'properties'
                         popArtifactFolder("source_tarball/", AWS_STASH_PATH)
                         buildStage("ubuntu:focal", "--build_source_deb=1")
 
@@ -164,13 +159,11 @@ pipeline {
             parallel {
                 stage('Centos 7') {
                     agent {
-                        label 'min-centos-7-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry rpm on Centos 7 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("rpm")
-                        unstash 'properties'
                         popArtifactFolder("srpm/", AWS_STASH_PATH)
                         buildStage("centos:7", "--build_rpm=1")
 
@@ -180,13 +173,11 @@ pipeline {
                 } //stage
                 stage('OL 8') {
                     agent {
-                        label 'min-ol-8-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry rpm on OL 8 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("rpm")
-                        unstash 'properties'
                         popArtifactFolder("srpm/", AWS_STASH_PATH)
                         buildStage("oraclelinux:8", "--build_rpm=1")
 
@@ -196,13 +187,11 @@ pipeline {
                 } //stage
                 stage('OL 9') {
                     agent {
-                        label 'min-ol-9-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry rpm on OL 9 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("rpm")
-                        unstash 'properties'
                         popArtifactFolder("srpm/", AWS_STASH_PATH)
                         buildStage("oraclelinux:9", "--build_rpm=1")
 
@@ -216,13 +205,11 @@ pipeline {
             parallel {
                 stage('Ubuntu 20.04') {
                     agent {
-                        label 'min-focal-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry deb on Ubuntu 20.04 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("deb")
-                        unstash 'properties'
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("ubuntu:focal", "--build_deb=1")
 
@@ -232,13 +219,11 @@ pipeline {
                 } //stage
                 stage('Ubuntu 22.04') {
                     agent {
-                        label 'min-jammy-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry deb on Ubuntu 22.04 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("deb")
-                        unstash 'properties'
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("ubuntu:jammy", "--build_deb=1")
 
@@ -253,8 +238,6 @@ pipeline {
                     steps {
 			echo "====> Build percona_pg_telemetry deb on Ubuntu 24.04 PG${PG_RELEASE}"
                         cleanUpWS()
-			installCli("deb")
-			unstash 'properties'
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("ubuntu:noble", "--build_deb=1")
 
@@ -264,13 +247,11 @@ pipeline {
                 } //stage
                 stage('Debian 10') {
                     agent {
-                        label 'min-buster-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry deb on Debian 10 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("deb")
-                        unstash 'properties'
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("debian:buster", "--build_deb=1")
 
@@ -280,13 +261,11 @@ pipeline {
                 } //stage
                 stage('Debian 11') {
                     agent {
-                        label 'min-bullseye-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry deb on Debian 11 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("deb")
-                        unstash 'properties'
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("debian:bullseye", "--build_deb=1")
 
@@ -296,13 +275,11 @@ pipeline {
                 } //stage
                 stage('Debian 12') {
                     agent {
-                        label 'min-bookworm-x64'
+                        label 'docker'
                     }
                     steps {
                         echo "====> Build percona_pg_telemetry deb on Debian 12 PG${PG_RELEASE}"
                         cleanUpWS()
-                        installCli("deb")
-                        unstash 'properties'
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("debian:bookworm", "--build_deb=1")
 
@@ -312,6 +289,12 @@ pipeline {
                 } //stage
             } //parallel
         } //stage
+	stage('Sign packages') {
+            steps {
+                signRPM()
+                signDEB()
+            }
+        }
         stage('Push to public repository') {
             steps {
                 // sync packages
