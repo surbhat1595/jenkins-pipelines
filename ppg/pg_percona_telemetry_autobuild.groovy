@@ -133,7 +133,7 @@ pipeline {
                         echo "====> Build percona_pg_telemetry generic source rpm"
                         cleanUpWS()
                         popArtifactFolder("source_tarball/", AWS_STASH_PATH)
-                        buildStage("centos:7", "--build_src_rpm=1")
+                        buildStage("oraclelinux:8", "--build_src_rpm=1")
 
                         pushArtifactFolder("srpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS("srpm/", AWS_STASH_PATH)
@@ -157,20 +157,6 @@ pipeline {
         } //stage
         stage('Build percona_pg_telemetry RPMs') {
             parallel {
-                stage('Centos 7') {
-                    agent {
-                        label 'docker'
-                    }
-                    steps {
-                        echo "====> Build percona_pg_telemetry rpm on Centos 7 PG${PG_RELEASE}"
-                        cleanUpWS()
-                        popArtifactFolder("srpm/", AWS_STASH_PATH)
-                        buildStage("centos:7", "--build_rpm=1")
-
-                        pushArtifactFolder("rpm/", AWS_STASH_PATH)
-                        uploadRPMfromAWS("rpm/", AWS_STASH_PATH)
-                    }
-                } //stage
                 stage('OL 8') {
                     agent {
                         label 'docker'
