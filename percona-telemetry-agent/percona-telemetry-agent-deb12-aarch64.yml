@@ -1,0 +1,15 @@
+- job:
+    name: percona-telemetry-agent-deb12-arm64-RELEASE
+    project-type: pipeline
+    description: |
+        Do not edit this job through the web!
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+            - 'master'
+            wipe-workspace: false
+      lightweight-checkout: true
+      script-path: percona-telemetry-agent/percona-telemetry-agent-deb12-aarch64.groovy
+
