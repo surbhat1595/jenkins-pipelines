@@ -78,7 +78,7 @@ pipeline {
         choice(
             name: 'PG_RELEASE',
             description: 'PPG major version to test',
-            choices: ['11', '12', '13', '14', '15', '16']
+            choices: ['11', '12', '13', '14', '15', '16', '17']
         )
         string(
             defaultValue: 'ppg-16.0',
@@ -226,20 +226,6 @@ pipeline {
                         cleanUpWS()
                         popArtifactFolder("source_deb/", AWS_STASH_PATH)
                         buildStage("ubuntu:noble", "--build_deb=1")
-
-                        pushArtifactFolder("deb/", AWS_STASH_PATH)
-                        uploadDEBfromAWS("deb/", AWS_STASH_PATH)
-                    }
-                } //stage
-                stage('Debian 10') {
-                    agent {
-                        label 'docker'
-                    }
-                    steps {
-                        echo "====> Build percona_pg_telemetry deb on Debian 10 PG${PG_RELEASE}"
-                        cleanUpWS()
-                        popArtifactFolder("source_deb/", AWS_STASH_PATH)
-                        buildStage("debian:buster", "--build_deb=1")
 
                         pushArtifactFolder("deb/", AWS_STASH_PATH)
                         uploadDEBfromAWS("deb/", AWS_STASH_PATH)
