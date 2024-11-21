@@ -1,0 +1,14 @@
+- job:
+    name: pg_percona_telemetry-arm-RELEASE
+    project-type: pipeline
+    description: |
+        Do not edit this job through the web!
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+            - 'ARM_pg'
+            wipe-workspace: false
+      lightweight-checkout: true
+      script-path: ppg/pg_percona_telemetry_autobuild_arm.groovy
