@@ -1,23 +1,45 @@
-library changelog: false, identifier: 'lib@amznlinux', retriever: modernSCM([
+library changelog: false, identifier: 'lib@master', retriever: modernSCM([
     $class: 'GitSCMSource',
-    remote: 'https://github.com/surbhat1595/jenkins-pipelines.git'
+    remote: 'https://github.com/Percona-Lab/jenkins-pipelines.git'
 ]) _
 
 import groovy.transform.Field
 
 void buildStage(String DOCKER_OS, String STAGE_PARAM) {
-    sh """
-        set -o xtrace
-        mkdir test
-        wget \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/${BRANCH}/storage/innobase/xtrabackup/utils/percona-xtrabackup-8.0_builder.sh -O percona-xtrabackup-8.0_builder.sh
-        pwd -P
-        export build_dir=\$(pwd -P)
-        docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
-            set -o xtrace
-            cd \${build_dir}
-            bash -x ./percona-xtrabackup-8.0_builder.sh --builddir=\${build_dir}/test --install_deps=1
-            bash -x ./percona-xtrabackup-8.0_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --branch=${BRANCH} --pxb_repo=${PXB_REPO} --rpm_release=${RPM_RELEASE} --deb_release=${DEB_RELEASE} ${STAGE_PARAM}"
-    """
+    withCredentials([string(credentialsId: 'GITHUB_API_TOKEN', variable: 'TOKEN')]) {
+      sh """
+          set -o xtrace
+          mkdir test
+          if [ \${FIPSMODE} = "YES" ]; then
+              MYSQL_VERSION_MINOR=\$(curl -s -O \$(echo \${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/\${BRANCH}/MYSQL_VERSION && grep MYSQL_VERSION_MINOR MYSQL_VERSION | awk -F= '{print \$2}')
+              if [ \${MYSQL_VERSION_MINOR} = "0" ]; then
+                  PRO_BRANCH="8.0"
+              elif [ \${MYSQL_VERSION_MINOR} = "4" ]; then
+                  PRO_BRANCH="8.4"
+              else
+                  PRO_BRANCH="trunk"
+              fi
+              curl -L -H "Authorization: Bearer \${TOKEN}" \
+                      -H "Accept: application/vnd.github.v3.raw" \
+                      -o percona-xtrabackup-8.0_builder.sh \
+                      "https://api.github.com/repos/surbhat1595/percona-xtrabackup-private-build/contents/percona-xtrabackup-8.0_builder.sh?ref=\${PRO_BRANCH}"
+          else
+              wget \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/${BRANCH}/storage/innobase/xtrabackup/utils/percona-xtrabackup-8.0_builder.sh -O percona-xtrabackup-8.0_builder.sh
+          fi
+          pwd -P
+          export build_dir=\$(pwd -P)
+          docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
+              set -o xtrace
+              cd \${build_dir}
+              bash -x ./percona-xtrabackup-8.0_builder.sh --builddir=\${build_dir}/test --install_deps=1
+              if [ \${FIPSMODE} = "YES" ]; then
+                  git clone --depth 1 --branch \${PRO_BRANCH} https://x-access-token:${TOKEN}@github.com/surbhat1595/percona-xtrabackup-private-build.git percona-xtrabackup-private-build
+                  mv -f \${build_dir}/percona-xtrabackup-private-build \${build_dir}/test/.
+                  ls \${build_dir}/test
+              fi
+              bash -x ./percona-xtrabackup-8.0_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --branch=${BRANCH} --rpm_release=${RPM_RELEASE} --deb_release=${DEB_RELEASE} ${STAGE_PARAM}"
+      """
+    }
 }
 
 void cleanUpWS() {
@@ -161,9 +183,9 @@ pipeline {
             description: 'DEB release value',
             name: 'DEB_RELEASE')
         choice(
-            choices: 'pxb-80\npxb-8x-innovation\npxb-84-lts\npxb-9x-innovation\npxb-9x-lts',
-            description: 'PXB repo name',
-            name: 'PXB_REPO')
+            choices: 'NO\nYES',
+            description: 'Enable fipsmode',
+            name: 'FIPSMODE')
         choice(
             choices: 'laboratory\ntesting\nexperimental',
             description: 'Repo component to push packages to',
@@ -179,7 +201,13 @@ pipeline {
             steps {
                 // slackNotify("", "#00FF00", "[${JOB_NAME}]: starting build for ${BRANCH} - [${BUILD_URL}]")
                 cleanUpWS()
-                buildStage("ubuntu:focal", "--get_sources=1")
+                script {
+                            if (env.FIPSMODE == 'YES') {
+                                buildStage("ubuntu:focal", "--get_sources=1 --enable_fipsmode=1")
+                            } else {
+                                buildStage("ubuntu:focal", "--get_sources=1")
+                            }
+                       }
                 sh '''
                    REPO_UPLOAD_PATH=$(grep "UPLOAD" test/percona-xtrabackup-8.0.properties | cut -d = -f 2 | sed "s:$:${BUILD_NUMBER}:")
                    AWS_STASH_PATH=$(echo ${REPO_UPLOAD_PATH} | sed  "s:UPLOAD/experimental/::")
@@ -210,7 +238,13 @@ pipeline {
                     steps {
                         cleanUpWS()
                         popArtifactFolder("source_tarball/", AWS_STASH_PATH)
-                        buildStage("amazonlinux:2023", "--build_src_rpm=1")
+                        script {
+                            if (env.FIPSMODE == 'YES') {
+                                buildStage("centos:7", "--build_src_rpm=1 --enable_fipsmode=1")
+                            } else {
+                                buildStage("centos:7", "--build_src_rpm=1")
+                            }
+                        }
 
                         pushArtifactFolder("srpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS("srpm/", AWS_STASH_PATH)
@@ -226,14 +260,39 @@ pipeline {
                         label 'docker-32gb'
                     }
                     steps {
-                        cleanUpWS()
-                        popArtifactFolder("srpm/", AWS_STASH_PATH)
-                        buildStage("amazonlinux:2023", "--build_rpm=1")
-            
-                        pushArtifactFolder("rpm/", AWS_STASH_PATH)
-                        uploadRPMfromAWS("rpm/", AWS_STASH_PATH)
+                        script {
+                            if (env.FIPSMODE == 'NO') {
+                                echo "The step is skipped"
+                            } else {
+                                cleanUpWS()
+                                popArtifactFolder("srpm/", AWS_STASH_PATH)
+                                buildStage("amazonlinux:2023", "--build_rpm=1 --enable_fipsmode=1")
+
+                                pushArtifactFolder("rpm/", AWS_STASH_PATH)
+                                uploadRPMfromAWS("rpm/", AWS_STASH_PATH)
+                            }
+                        }
                     }
-                } 
+                }
+                stage('Amazon Linux 2023 ARM') {
+                    agent {
+                        label 'docker-32gb-aarch64'
+                    }
+                    steps {
+                        script {
+                            if (env.FIPSMODE == 'NO') {
+                                echo "The step is skipped"
+                            } else {
+                                cleanUpWS()
+                                popArtifactFolder("srpm/", AWS_STASH_PATH)
+                                buildStage("amazonlinux:2023", "--build_rpm=1 --enable_fipsmode=1")
+
+                                pushArtifactFolder("rpm/", AWS_STASH_PATH)
+                                uploadRPMfromAWS("rpm/", AWS_STASH_PATH)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -245,8 +304,32 @@ pipeline {
         
         stage('Push to public repository') {
             steps {
-                // sync packages
-                sync2ProdAutoBuild(PXB_REPO, COMPONENT)
+                script {
+                    MYSQL_VERSION_MINOR = sh(returnStdout: true, script: ''' curl -s -O $(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git$||')/${BRANCH}/MYSQL_VERSION; cat MYSQL_VERSION | grep MYSQL_VERSION_MINOR | awk -F= '{print $2}' ''').trim()
+                    PS_MAJOR_RELEASE = sh(returnStdout: true, script: ''' echo ${BRANCH} | sed "s/release-//g" | sed "s/\\.//g" | awk '{print substr($0, 0, 2)}' ''').trim()
+                    // sync packages
+                    if ("${MYSQL_VERSION_MINOR}" == "0") {
+                        if (env.FIPSMODE == 'YES') {
+                            sync2PrivateProdAutoBuild("pxb-80-pro", COMPONENT)
+                        } else {
+                            sync2ProdAutoBuild("pxb-80", COMPONENT)
+                        }
+                    } else {
+                        if (env.FIPSMODE == 'YES') {
+                            if ("${MYSQL_VERSION_MINOR}" == "4") {
+                                sync2PrivateProdAutoBuild("pxb-84-pro", COMPONENT)
+                            } else {
+                                sync2PrivateProdAutoBuild("pxb-8x-innovation-pro", COMPONENT)
+                            }
+                        } else {
+                            if ("${MYSQL_VERSION_MINOR}" == "4") {
+                                sync2ProdAutoBuild("pxb-84-lts", COMPONENT)
+                            } else {
+                                sync2ProdAutoBuild("pxb-8x-innovation", COMPONENT)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -255,7 +338,11 @@ pipeline {
             //slackNotify("#releases", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${BRANCH} - [${BUILD_URL}]")
             unstash 'uploadPath'
             script {
-                currentBuild.description = "Built on ${BRANCH}; path to packages: ${COMPONENT}/${AWS_STASH_PATH}"
+                if (env.FIPSMODE == 'YES') {
+                    currentBuild.description = "PRO -> Built on ${BRANCH}; path to packages: [${COMPONENT}/${AWS_STASH_PATH}]"
+                } else {
+                    currentBuild.description = "Built on ${BRANCH}; path to packages: [${COMPONENT}/${AWS_STASH_PATH}]"
+                }
             }
             //slackNotify("#dev-server-qa", "#00FF00", "[${JOB_NAME}]: Triggering Builds for Package Testing for ${BRANCH} - [${BUILD_URL}]")
             script {
@@ -323,6 +410,13 @@ pipeline {
         }
         failure {
            // slackNotify("", "#FF0000", "[${JOB_NAME}]: build failed for ${BRANCH} - [${BUILD_URL}]")
+            script {
+                if (env.FIPSMODE == 'YES') {
+                    currentBuild.description = "PRO -> Built on ${BRANCH}; path to packages: [${COMPONENT}/${AWS_STASH_PATH}]"
+                } else {
+                    currentBuild.description = "Built on ${BRANCH}; path to packages: [${COMPONENT}/${AWS_STASH_PATH}]"
+                }
+            }
             deleteDir()
         }
         always {
