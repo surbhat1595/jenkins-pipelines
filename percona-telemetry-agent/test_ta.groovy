@@ -14,7 +14,7 @@ pipeline {
                             sudo apt-get install -y sudo wget gnupg2 lsb-release curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
@@ -35,7 +35,7 @@ pipeline {
                             sudo apt-get install -y sudo wget gnupg2 lsb-release curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
@@ -55,7 +55,7 @@ pipeline {
                             sudo apt-get install -y sudo wget gnupg2 lsb-release curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
@@ -76,7 +76,7 @@ pipeline {
                             sudo apt-get install -y sudo wget gnupg2 lsb-release curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
@@ -97,7 +97,7 @@ pipeline {
                             sudo apt-get install -y sudo wget gnupg2 lsb-release curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
@@ -117,7 +117,7 @@ pipeline {
                             sudo yum install -y sudo wget gnupg2 curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
@@ -137,7 +137,7 @@ pipeline {
                             sudo yum install -y sudo wget gnupg2 curl systemd
 
                             # Download and run your script
-                            wget https://raw.githubusercontent.com/EvgeniyPatlan/TA_tests/main/test_ta.sh -O your-script.sh
+                            wget https://raw.githubusercontent.com/surbhat1595/TA_tests/main/test_ta.sh -O your-script.sh
                             chmod +x your-script.sh
                             sudo ./your-script.sh
 
