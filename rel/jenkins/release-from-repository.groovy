@@ -168,21 +168,10 @@ ENDSSH
                                         echo "<*> Removing lock file as requested..."
                                         rm -vf  \${REPOPATH}/db/lockfile
                                     fi
-                                    if [[ ${COMPONENT} == RELEASE ]]; then
+				    if [[ ${COMPONENT} == RELEASE ]]; then
                                         export REPOCOMP=main
-                                        if [ -d /srv/UPLOAD/${PATH_TO_BUILD}/source/debian ]; then
-                                            cd /srv/UPLOAD/${PATH_TO_BUILD}/source/debian
-                                            DSC=\$(find . -type f -name '*.dsc')
-                                            for DSC_FILE in \${DSC}; do
-                                                echo "<*> DSC file is "\${DSC_FILE}
-                                                for _codename in \${CODENAMES}; do
-                                                    echo "<*> CODENAME: "\${_codename}
-                                                    repopush --gpg-pass=${SIGN_PASSWORD} --package=\${DSC_FILE} --repo-path=\${REPOPATH} --component=\${REPOCOMP}  --codename=\${_codename} --verbose \${REPOPUSH_ARGS} || true
-                                                    sleep 5
-                                                done
-                                            done
-                                        fi
                                     fi
+
                                     # -------------------------------------> binary pushing
                                     cd /srv/UPLOAD/${PATH_TO_BUILD}/binary/debian
                                     for _codename in \${CODENAMES}; do

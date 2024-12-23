@@ -1,5 +1,5 @@
 - job:
-    name: RELEASE-from-repository
+    name: RELEASE-from-repository-telemetry
     project-type: pipeline
     description: |
         Do not edit this job through the web!
