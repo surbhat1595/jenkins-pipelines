@@ -1,0 +1,14 @@
+- job:
+    name: haproxy-amznlinux-RELEASE
+    project-type: pipeline
+    description: |
+        Do not edit this job through the web!
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+            - 'amazon2023'
+            wipe-workspace: false
+      lightweight-checkout: true
+      script-path: ppg/haproxy-amzn.groovy
