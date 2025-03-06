@@ -1,0 +1,15 @@
+- job:
+    name: hetzner-psmdb80-debug
+    project-type: pipeline
+    description: |
+        Do not edit this job through the web!
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+            - 'hetzner'
+            wipe-workspace: false
+      -checkout: true
+      script-path: psmdb/jenkins/percona-server-for-mongodb-8.0-debug.groovy
+
