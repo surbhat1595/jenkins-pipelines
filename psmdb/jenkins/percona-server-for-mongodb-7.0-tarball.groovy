@@ -4,19 +4,41 @@ library changelog: false, identifier: 'lib@hetzner', retriever: modernSCM([
 ]) _
 
 void buildStage(String DOCKER_OS, String STAGE_PARAM) {
-    sh """
-        set -o xtrace
-        mkdir test
-        wget \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/${GIT_BRANCH}/percona-packaging/scripts/psmdb_builder.sh -O psmdb_builder.sh
-        pwd -P
-        ls -laR
-        export build_dir=\$(pwd -P)
-        docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
+    withCredentials([string(credentialsId: 'GITHUB_API_TOKEN', variable: 'TOKEN')]) {
+        sh """
             set -o xtrace
-            cd \${build_dir}
-            bash -x ./psmdb_builder.sh --builddir=\${build_dir}/test --install_deps=1
-            bash -x ./psmdb_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --branch=${GIT_BRANCH} --psm_ver=${PSMDB_VERSION} --psm_release=${PSMDB_RELEASE} --mongo_tools_tag=${MONGO_TOOLS_TAG} ${STAGE_PARAM}"
+            ls -laR ./
+            rm -rf test/*
+            mkdir -p test
+            if [ \${FULL_FEATURED} = "yes" ]; then
+                PRO_BRANCH="v7.0"
+                curl -H "Authorization: token ${TOKEN}" https://api.github.com/user
+                curl -L -H "Authorization: Bearer \${TOKEN}" \
+                     -H "Accept: application/vnd.github.v3.raw" \
+                     -o psmdb_builder.sh \
+                     "https://api.github.com/repos/surbhat1595/mongo-build-scripts/contents/scripts/psmdb_builder.sh?ref=\${PRO_BRANCH}"
+            else
+                wget \$(echo \${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/${GIT_BRANCH}/percona-packaging/scripts/psmdb_builder.sh -O psmdb_builder.sh
+            fi
+            pwd -P
+            ls -laR
+            export build_dir=\$(pwd -P)
+            docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
+                set -o xtrace
+                cd \${build_dir}
+                bash -x ./psmdb_builder.sh --builddir=\${build_dir}/test --install_deps=1
+                if [ \${FULL_FEATURED} = "yes" ]; then
+                    git clone --depth 1 --branch \${PRO_BRANCH} https://x-access-token:${TOKEN}@github.com/surbhat1595/mongo-build-scripts.git percona-packaging
+                    ls -la \${build_dir}
+                    ls -la \${build_dir}/test/
+                    mv -f \${build_dir}/percona-packaging \${build_dir}/test/.
+                    ls -la \${build_dir}
+                    ls -la \${build_dir}/test/
+                    ls -la \${build_dir}/percona-packaging
+                fi
+                bash -x ./psmdb_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --branch=${GIT_BRANCH} --psm_ver=${PSMDB_VERSION} --psm_release=${PSMDB_RELEASE} --mongo_tools_tag=${MONGO_TOOLS_TAG} ${STAGE_PARAM}"
     """
+    }
 }
 
 void cleanUpWS() {
@@ -41,11 +63,11 @@ pipeline {
             description: 'URL for  percona-server-mongodb repository',
             name: 'GIT_REPO')
         string(
-            defaultValue: 'v8.0',
+            defaultValue: 'v6.0',
             description: 'Tag/Branch for percona-server-mongodb repository',
             name: 'GIT_BRANCH')
         string(
-            defaultValue: '8.0.0',
+            defaultValue: '6.0.0',
             description: 'PSMDB release value',
             name: 'PSMDB_VERSION')
         string(
@@ -53,17 +75,17 @@ pipeline {
             description: 'PSMDB release value',
             name: 'PSMDB_RELEASE')
         string(
-            defaultValue: '100.9.5',
+            defaultValue: '100.5.4',
             description: 'https://docs.mongodb.com/database-tools/installation/',
             name: 'MONGO_TOOLS_TAG')
         string(
-            defaultValue: 'psmdb-80',
+            defaultValue: 'psmdb-60',
             description: 'PSMDB repo name',
             name: 'PSMDB_REPO')
         choice(
             choices: 'no\nyes',
-            description: 'Enable fipsmode',
-            name: 'FIPSMODE')
+            description: 'Enable all pro features',
+            name: 'FULL_FEATURED')
         choice(
             choices: 'laboratory\ntesting\nexperimental',
             description: 'Repo component to push packages to',
@@ -83,13 +105,19 @@ pipeline {
             steps {
                 //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
                 cleanUpWS()
-                buildStage("oraclelinux:8", "--get_sources=1")
+                script {
+                    if (env.FULL_FEATURED == 'yes') {
+                        buildStage("oraclelinux:8", "--get_sources=1 --full_featured=1")
+                    } else {
+                        buildStage("oraclelinux:8", "--get_sources=1")
+                    }
+                }
                 sh '''
-                   REPO_UPLOAD_PATH=$(grep "UPLOAD" test/percona-server-mongodb-60.properties | cut -d = -f 2 | sed "s:$:${BUILD_NUMBER}:")
+                   REPO_UPLOAD_PATH=$(grep "UPLOAD" test/percona-server-mongodb-70.properties | cut -d = -f 2 | sed "s:$:${BUILD_NUMBER}:")
                    AWS_STASH_PATH=$(echo ${REPO_UPLOAD_PATH} | sed  "s:UPLOAD/experimental/::")
                    echo ${REPO_UPLOAD_PATH} > uploadPath
                    echo ${AWS_STASH_PATH} > awsUploadPath
-                   cat test/percona-server-mongodb-60.properties
+                   cat test/percona-server-mongodb-70.properties
                    cat uploadPath
                    cat awsUploadPath
                 '''
@@ -101,9 +129,9 @@ pipeline {
                 uploadTarballfromAWS(params.CLOUD, "source_tarball/", AWS_STASH_PATH, 'source')
             }
         }
-        stage('Build PSMDB generic source packages') {
+        stage('Build PSMDB RPMs/DEBs/Binary tarballs') {
             parallel {
-                stage('Build PSMDB generic source rpm') {
+                stage('Oracle Linux 8 binary tarball(glibc2.28)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
@@ -112,37 +140,32 @@ pipeline {
                         popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
                         script {
                             if (env.FIPSMODE == 'yes') {
-                                buildStage("oraclelinux:8", "--build_src_rpm=1 --enable_fipsmode=1")
+                                buildStage("oraclelinux:8", "--build_tarball=1 --full_featured=1")
                             } else {
-                                buildStage("oraclelinux:8", "--build_src_rpm=1")
+                                buildStage("oraclelinux:8", "--build_tarball=1")
                             }
+                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
                         }
-
-                        pushArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        uploadRPMfromAWS(params.CLOUD, "srpm/", AWS_STASH_PATH)
                     }
                 }
-            }  //parallel
-        } // stage
-        stage('Build PSMDB RPMs/DEBs/Binary tarballs') {
-            parallel {
-                stage('Oracle Linux 8(x86_64)') {
+                stage('Oracle Linux 9 binary tarball(glibc2.34)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
                     steps {
                         cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
+                        popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
                         script {
                             if (env.FIPSMODE == 'yes') {
-                                buildStage("oraclelinux:8", "--build_rpm=1 --enable_fipsmode=1")
+                                buildStage("oraclelinux:9", "--build_tarball=1 --full_featured=1")
                             } else {
-                                buildStage("oraclelinux:8", "--build_rpm=1")
+                                buildStage("oraclelinux:9", "--build_tarball=1")
                             }
+                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
                         }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
+ 
             }
         }
 
@@ -153,20 +176,16 @@ pipeline {
             steps {
                 cleanUpWS()
 
-                uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
+                uploadTarballfromAWS(params.CLOUD, "tarball/", AWS_STASH_PATH, 'binary')
             }
         }
 
-        stage('Sign packages') {
-            steps {
-                signRPM()
-            }
-        }
         stage('Push to public repository') {
             steps {
                 // sync packages
                 script {
-                    if (env.FIPSMODE == 'yes') {
+                    if (env.FULL_FEATURED == 'yes') {
+                        // Replace by a new procedure when it's ready
                         sync2PrivateProdAutoBuild(params.CLOUD, PSMDB_REPO+"-pro", COMPONENT)
                     } else {
                         sync2ProdAutoBuild(params.CLOUD, PSMDB_REPO, COMPONENT)
@@ -177,9 +196,9 @@ pipeline {
     }
     post {
         success {
-            //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
             script {
-                if (env.FIPSMODE == 'yes') {
+                if (env.FULL_FEATURED == 'yes') {
                     currentBuild.description = "!!! PRO Built on ${GIT_BRANCH}. Path to packages: experimental/${AWS_STASH_PATH}"
                 } else {
                     currentBuild.description = "Built on ${GIT_BRANCH}. Path to packages: experimental/${AWS_STASH_PATH}"

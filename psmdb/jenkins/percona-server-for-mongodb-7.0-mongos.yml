@@ -1,5 +1,5 @@
 - job:
-    name: hetzner-psmdb60-protest
+    name: hetzner-psmdb70-mongos
     project-type: pipeline
     description: |
         Do not edit this job through the web!
@@ -10,6 +10,6 @@
             branches:
             - 'hetzner'
             wipe-workspace: false
-      lightweight-checkout: true
-      script-path: psmdb/jenkins/percona-server-for-mongodb-6.0.groovy
+      -checkout: true
+      script-path: psmdb/jenkins/percona-server-for-mongodb-7.0-mongos.groovy
 

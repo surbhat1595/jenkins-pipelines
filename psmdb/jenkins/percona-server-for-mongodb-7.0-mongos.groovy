@@ -85,11 +85,11 @@ pipeline {
                 cleanUpWS()
                 buildStage("oraclelinux:8", "--get_sources=1")
                 sh '''
-                   REPO_UPLOAD_PATH=$(grep "UPLOAD" test/percona-server-mongodb-60.properties | cut -d = -f 2 | sed "s:$:${BUILD_NUMBER}:")
+                   REPO_UPLOAD_PATH=$(grep "UPLOAD" test/percona-server-mongodb-70.properties | cut -d = -f 2 | sed "s:$:${BUILD_NUMBER}:")
                    AWS_STASH_PATH=$(echo ${REPO_UPLOAD_PATH} | sed  "s:UPLOAD/experimental/::")
                    echo ${REPO_UPLOAD_PATH} > uploadPath
                    echo ${AWS_STASH_PATH} > awsUploadPath
-                   cat test/percona-server-mongodb-60.properties
+                   cat test/percona-server-mongodb-70.properties
                    cat uploadPath
                    cat awsUploadPath
                 '''
@@ -101,9 +101,9 @@ pipeline {
                 uploadTarballfromAWS(params.CLOUD, "source_tarball/", AWS_STASH_PATH, 'source')
             }
         }
-        stage('Build PSMDB generic source packages') {
+        stage('Build PSMDB RPMs/DEBs/Binary tarballs') {
             parallel {
-                stage('Build PSMDB generic source rpm') {
+                stage('Oracle Linux 8 binary tarball(glibc2.28)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
@@ -112,35 +112,29 @@ pipeline {
                         popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
                         script {
                             if (env.FIPSMODE == 'yes') {
-                                buildStage("oraclelinux:8", "--build_src_rpm=1 --enable_fipsmode=1")
+                                buildStage("oraclelinux:8", "--build_tarball=1 --enable_fipsmode=1")
                             } else {
-                                buildStage("oraclelinux:8", "--build_src_rpm=1")
+                                buildStage("oraclelinux:8", "--build_tarball=1")
                             }
+                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
                         }
-
-                        pushArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        uploadRPMfromAWS(params.CLOUD, "srpm/", AWS_STASH_PATH)
                     }
                 }
-            }  //parallel
-        } // stage
-        stage('Build PSMDB RPMs/DEBs/Binary tarballs') {
-            parallel {
-                stage('Oracle Linux 8(x86_64)') {
+                stage('Oracle Linux 9 binary tarball(glibc2.34)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
                     steps {
                         cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
+                        popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
                         script {
                             if (env.FIPSMODE == 'yes') {
-                                buildStage("oraclelinux:8", "--build_rpm=1 --enable_fipsmode=1")
+                                buildStage("oraclelinux:9", "--build_tarball=1 --enable_fipsmode=1")
                             } else {
-                                buildStage("oraclelinux:8", "--build_rpm=1")
+                                buildStage("oraclelinux:9", "--build_tarball=1")
                             }
+                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
                         }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
             }
@@ -153,15 +147,10 @@ pipeline {
             steps {
                 cleanUpWS()
 
-                uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
+                uploadTarballfromAWS(params.CLOUD, "tarball/", AWS_STASH_PATH, 'binary')
             }
         }
 
-        stage('Sign packages') {
-            steps {
-                signRPM()
-            }
-        }
         stage('Push to public repository') {
             steps {
                 // sync packages
