@@ -1,0 +1,15 @@
+- job:
+    name: hetzner-percona-mongolink-RELEASE
+    project-type: pipeline
+    description: |
+        Do not edit this job through the web!
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+            - 'hetznerupdate'
+            wipe-workspace: false
+      lightweight-checkout: true
+      script-path: pml/percona-mongolink.groovy
+
