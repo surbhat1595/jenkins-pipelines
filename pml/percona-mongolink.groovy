@@ -4,27 +4,19 @@ library changelog: false, identifier: 'lib@hetzner', retriever: modernSCM([
 ]) _
 
 void buildStage(String DOCKER_OS, String STAGE_PARAM) {
-    withCredentials([string(credentialsId: 'GITHUB_API_TOKEN', variable: 'TOKEN')]) {
-        sh """
+    sh """
+        set -o xtrace
+        mkdir test
+        wget \$(echo ${GIT_REPO} | sed -re 's|github.com|raw.githubusercontent.com|; s|\\.git\$||')/${GIT_BRANCH}/packaging/scripts/percona-mongolink_builder.sh -O percona-mongolink_builder.sh
+        pwd -P
+        ls -laR
+        export build_dir=\$(pwd -P)
+        docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
             set -o xtrace
-            mkdir test
-            curl -L -H "Authorization: Bearer \${TOKEN}" \
-                       -H "Accept: application/vnd.github.v3.raw" \
-                       -o percona-mongolink_builder.sh \
-                       "https://api.github.com/repos/Percona-Lab/percona-mongolink/contents/packaging/scripts/percona-mongolink_builder.sh?ref=\${GIT_BRANCH}"
-            pwd -P
-            ls -laR
-            export build_dir=\$(pwd -P)
-            docker run -u root -v \${build_dir}:\${build_dir} ${DOCKER_OS} sh -c "
-                set -o xtrace
-                cd \${build_dir}
-                bash -x ./percona-mongolink_builder.sh --builddir=\${build_dir}/test --install_deps=1
-                git clone --depth 1 --branch \${GIT_BRANCH} https://x-access-token:${TOKEN}@github.com/Percona-Lab/percona-mongolink.git percona-mongolink
-                mv -f \${build_dir}/percona-mongolink \${build_dir}/test/.
-                ls -la \${build_dir}/percona-mongolink
-                bash -x ./percona-mongolink_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --version=${VERSION} --branch=${GIT_BRANCH} --release=${RELEASE} ${STAGE_PARAM}"
-        """
-    }
+            cd \${build_dir}
+            bash -x ./percona-mongolink_builder.sh --builddir=\${build_dir}/test --install_deps=1
+            bash -x ./percona-mongolink_builder.sh --builddir=\${build_dir}/test --repo=${GIT_REPO} --version=${VERSION} --branch=${GIT_BRANCH} --rpm_release=${RPM_RELEASE} --deb_release=${DEB_RELEASE} ${STAGE_PARAM}"
+    """
 }
 
 void cleanUpWS() {
@@ -45,7 +37,7 @@ pipeline {
              description: 'Cloud infra for build',
              name: 'CLOUD' )
         string(
-            defaultValue: 'https://github.com/Percona-Lab/percona-mongolink.git',
+            defaultValue: 'https://github.com/percona/percona-mongolink.git',
             description: 'URL for percona-mongolink repository',
             name: 'GIT_REPO')
         string(
