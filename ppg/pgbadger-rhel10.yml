@@ -1,5 +1,5 @@
 - job:
-    name: hetzner-psmdb70-custombuild
+    name: hetzner-pgbadger-rhel10-RELEASE
     project-type: pipeline
     description: |
         Do not edit this job through the web!
@@ -11,5 +11,4 @@
             - 'hetznerpsmdb'
             wipe-workspace: false
       lightweight-checkout: true
-      script-path: psmdb/jenkins/percona-server-for-mongodb-7.0.groovy
-
+      script-path: ppg/pgbadger.groovy
