@@ -165,7 +165,7 @@ ENDSSH
                                     echo "<*> path to repo is "\${REPOPATH}
                                     echo "<*> reprepro binary is "\$(which reprepro)
                                     cd /srv/UPLOAD/${PATH_TO_BUILD}/binary/debian
-                                    CODENAMES=\$(ls -1)
+                                    CODENAMES="bookworm"
                                     echo "<*> Distributions are: "\${CODENAMES}
                                     # -------------------------------------> source pushing, it's a bit specific
                                     if [[ ${REMOVE_LOCKFILE} = true ]]; then
