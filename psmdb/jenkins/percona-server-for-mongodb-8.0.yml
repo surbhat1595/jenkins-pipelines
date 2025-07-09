@@ -1,14 +1,14 @@
 - job:
-    name: hetzner-psmdb80-autobuild-RELEASE
+    name: hetzner-psmdb80-custombuild
     project-type: pipeline
     description: |
         Do not edit this job through the web!
     pipeline-scm:
       scm:
         - git:
-            url: https://github.com/Percona-Lab/jenkins-pipelines.git
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
             branches:
-            - 'hetzner'
+            - 'hetznerpsmdb'
             wipe-workspace: false
       lightweight-checkout: true
       script-path: psmdb/jenkins/percona-server-for-mongodb-8.0.groovy
