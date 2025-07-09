@@ -1,5 +1,5 @@
 - job:
-    name: hetzner-psmdb70-custombuild
+    name: hetzner-psmdb80-custombuild
     project-type: pipeline
     description: |
         Do not edit this job through the web!
@@ -11,5 +11,5 @@
             - 'hetznerpsmdb'
             wipe-workspace: false
       lightweight-checkout: true
-      script-path: psmdb/jenkins/percona-server-for-mongodb-7.0.groovy
+      script-path: psmdb/jenkins/percona-server-for-mongodb-8.0.groovy
 
