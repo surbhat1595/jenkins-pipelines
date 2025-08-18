@@ -19,7 +19,7 @@ void buildStage(String DOCKER_OS, String STAGE_PARAM) {
             cd \${build_dir}
             ls -laR
             uname -a"
-            curl -fsSL https://raw.githubusercontent.com/surbhat1595/sbom_verifier/main/install_update_trivy.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/surbhat1595/sbom_verifier/trivy/install_sbom_verifier.sh | bash
     """
     }
 }
@@ -94,7 +94,7 @@ pipeline {
                                 """
                                 stash includes: "uploadPath-${PSMDB_VERSION}", name: "uploadPath-${PSMDB_VERSION}"
                                 sh """
-                                        curl -fsSL https://raw.githubusercontent.com/surbhat1595/sbom_verifier/main/install_update_trivy.sh | bash
+                                        curl -fsSL https://raw.githubusercontent.com/surbhat1595/sbom_verifier/trivy/install_sbom_verifier.sh | bash
                                 """
                         }
                     }
