@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // location of the test script
-        TEST_SCRIPT = 'https://raw.githubusercontent.com/percona/telemetry-agent/refs/heads/main/packaging/scripts/test-telemetry-agent.sh'
+        TEST_SCRIPT = 'https://raw.githubusercontent.com/surbhat1595/telemetry-agent/refs/heads/main/packaging/scripts/test-telemetry-agent.sh'
     }
 
     parameters {
@@ -166,6 +166,7 @@ pipeline {
                         script {
                             sh '''
                             # Update package list and install necessary dependencies
+                            sudo yum install -y openssl-libs
                             sudo yum install -y sudo wget gnupg2 curl systemd
 
                             # Download and run your script
