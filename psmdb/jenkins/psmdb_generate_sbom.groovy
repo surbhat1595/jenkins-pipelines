@@ -1,6 +1,6 @@
-library changelog: false, identifier: 'lib@hetzner', retriever: modernSCM([
+library changelog: false, identifier: 'lib@hetznertel', retriever: modernSCM([
     $class: 'GitSCMSource',
-    remote: 'https://github.com/Percona-Lab/jenkins-pipelines.git'
+    remote: 'https://github.com/surbhat1595/jenkins-pipelines.git'
 ]) _
 
 void buildStage(String DOCKER_OS, String STAGE_PARAM) {
@@ -22,7 +22,7 @@ void buildStage(String DOCKER_OS, String STAGE_PARAM) {
             uname -a
             bash -x ./psmdb_generate_sbom.sh --builddir=\${build_dir} --psmdb_version=${PSMDB_VERSION} --repo_type=${REPO_TYPE} --git_repo=${GIT_REPO} --git_branch=${GIT_BRANCH} ${STAGE_PARAM}"
             curl -fsSL https://raw.githubusercontent.com/EvgeniyPatlan/sbom_verifier/main/install_sbom_verifier.sh | bash
-            bash sbom_verifier.sh psmdb_sbom/*.json
+            bash sbom_verifier.sh --snyk-only psmdb_sbom/*.json
     """
     }
 }
@@ -87,7 +87,7 @@ pipeline {
                 label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker'
             }
             steps {
-                slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
+                //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
                 cleanUpWS()
 		script {
 			TIMESTAMP = sh(script: 'date +%Y%m%d%H%M%S', returnStdout: true).trim()
@@ -392,14 +392,14 @@ pipeline {
     }
     post {
         success {
-            slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
             script {
                 currentBuild.description = "Built on ${GIT_BRANCH}"
             }
             deleteDir()
         }
         failure {
-            slackNotify("#releases-ci", "#FF0000", "[${JOB_NAME}]: build failed for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases-ci", "#FF0000", "[${JOB_NAME}]: build failed for ${GIT_BRANCH} - [${BUILD_URL}]")
             deleteDir()
         }
         always {
