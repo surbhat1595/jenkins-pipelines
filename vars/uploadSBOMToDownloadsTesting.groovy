@@ -59,20 +59,20 @@ def call(String CLOUD_NAME, String PRODUCT_NAME, String PRODUCT_VERSION, String 
                     echo "\$PSMDB_VERSION"
 
                     ssh -o StrictHostKeyChecking=no -i "\$KEY_PATH" "\$USER@repo.ci.percona.com" \\
-                      ssh -o StrictHostKeyChecking=no -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com \\
+                      ssh -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com \\
                       "mkdir -p /data/downloads/TESTING/psmdb-\${PSMDB_VERSION}/\${PRODUCT_NAME}-\${cutProductVersion}"
 
                     ssh -o StrictHostKeyChecking=no -i "\$KEY_PATH" "\$USER@repo.ci.percona.com" \\
-                      rsync -avti --dry-run -e "ssh -o StrictHostKeyChecking=no -p 2222" --bwlimit=50000 --progress \\
+                      rsync -avti -e '"ssh -p 2222"' --bwlimit=50000 --progress \\
                       "\${path_to_build%/}/\${SBOMType}/"* \\
                       jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/TESTING/psmdb-\${PSMDB_VERSION}/\${PRODUCT_NAME}-\${cutProductVersion}/
                 else
                     ssh -o StrictHostKeyChecking=no -i "\$KEY_PATH" "\$USER@repo.ci.percona.com" \\
-                      ssh -o StrictHostKeyChecking=no -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com \\
+                      ssh -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com \\
                       "mkdir -p /data/downloads/TESTING/\${PRODUCT_NAME}-\${cutProductVersion}"
 
                     ssh -o StrictHostKeyChecking=no -i "\$KEY_PATH" "\$USER@repo.ci.percona.com" \\
-                      rsync -avti --dry-run -e "ssh -o StrictHostKeyChecking=no -p 2222" --bwlimit=50000 --progress \\
+                      rsync -avti -e '"ssh -p 2222"' --bwlimit=50000 --progress \\
                       "\${path_to_build%/}/\${SBOMType}/"* \\
                       jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/TESTING/\${PRODUCT_NAME}-\${cutProductVersion}/
                 fi

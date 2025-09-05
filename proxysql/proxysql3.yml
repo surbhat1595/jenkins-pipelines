@@ -1,14 +1,14 @@
 - job:
-    name: hetzner-proxysql-v3-RELEASE
+    name: hetzner-proxysql-v3-test
     project-type: pipeline
     description: |
         Do not edit this job through the web!
     pipeline-scm:
       scm:
         - git:
-            url: https://github.com/Percona-Lab/jenkins-pipelines.git
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
             branches:
-            - 'hetzner'
+            - 'hetznertel'
             wipe-workspace: false
       lightweight-checkout: true
       script-path: proxysql/proxysql3.groovy
