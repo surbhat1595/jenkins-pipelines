@@ -11,5 +11,5 @@
             - 'hetznertel'
             wipe-workspace: false
       lightweight-checkout: true
-      script-path: proxysql/proxysql3.groovy
+      script-path: proxysql/proxysql.groovy
 

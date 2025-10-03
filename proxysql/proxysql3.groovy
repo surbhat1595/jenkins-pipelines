@@ -114,7 +114,7 @@ pipeline {
         }
         stage('Build PROXYSQL generic source packages') {
             parallel {
-                stage('Build PROXYSQL generic source rpm') {
+                /*stage('Build PROXYSQL generic source rpm') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-32gb-aarch64'
                     }
@@ -126,7 +126,7 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "srpm/", AWS_STASH_PATH)
                     }
-                }
+                } */
                 stage('Build PROXYSQL generic source deb') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
@@ -144,7 +144,7 @@ pipeline {
         } // stage
         stage('Build PROXYSQL RPMs/DEBs/Binary tarballs') {
             parallel {
-                stage('Oracle Linux 9') {
+               /* stage('Oracle Linux 9') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
@@ -273,8 +273,34 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
                         uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
                     }
+                } */
+                stage('Debian Trixie(13)') {
+                    agent {
+                        label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
+                    }
+                    steps {
+                        cleanUpWS()
+                        popArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
+                        buildStage("debian:trixie", "--build_deb=1")
+
+                        pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
+                        uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
+                    }
                 }
-                stage('Oracle Linux 9 tarball') {
+                stage('Debian Trixie(13) ARM') {
+                    agent {
+                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-32gb-aarch64'
+                    }
+                    steps {
+                        cleanUpWS()
+                        popArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
+                        buildStage("debian:trixie", "--build_deb=1")
+
+                        pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
+                        uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
+                    }
+                }
+               /* stage('Oracle Linux 9 tarball') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-32gb'
                     }
@@ -312,13 +338,13 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "test/tarball/", AWS_STASH_PATH)
                         uploadTarballfromAWS(params.CLOUD, "test/tarball/", AWS_STASH_PATH, 'binary')
                     }
-                }
+                } */
             }
         }
 
         stage('Sign packages') {
             steps {
-                signRPM(params.CLOUD)
+               // signRPM(params.CLOUD)
                 signDEB(params.CLOUD)
             }
         }
@@ -326,65 +352,6 @@ pipeline {
             steps {
                 // sync packages
                 sync2ProdAutoBuild(params.CLOUD, PROXYSQL_DEST_REPO, COMPONENT)
-            }
-        }
-        stage('Build docker containers') {
-            agent {
-                label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-32gb'
-            }
-            steps {
-                script {
-                    echo "====> Build docker containers"
-                    cleanUpWS()
-                    sh '''
-                        sleep 1200
-                    '''
-                    unstash 'uploadPath'
-                    sh '''
-                        sudo apt-get -y install apparmor
-                        sudo aa-status
-                        sudo systemctl stop apparmor
-                        sudo systemctl disable apparmor
-                        sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-                        sudo apt-get -y install apparmor
-                        sudo aa-status
-                        sudo systemctl stop apparmor
-                        sudo systemctl disable apparmor
-                        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-                        sudo systemctl restart docker
-                        git clone https://github.com/percona/percona-docker
-                        cd percona-docker/proxysql
-                        sed -i "s/ENV PROXYSQL_VERSION.*/ENV PROXYSQL_VERSION ${VERSION}-${RPM_RELEASE}/g" Dockerfile
-                        sed -i "s/enable proxysql testing/enable proxysql ${COMPONENT}/g" Dockerfile
-                        sed -i "s/proxysql2/proxysql3/g" Dockerfile
-                        sudo docker build --no-cache --platform "linux/amd64" -t perconalab/proxysql3:${VERSION}-${RPM_RELEASE} .
-
-                        sudo docker images
-                    '''
-                    withCredentials([
-                        usernamePassword(credentialsId: 'hub.docker.com',
-                        passwordVariable: 'PASS',
-                        usernameVariable: 'USER'
-                        )]) {
-                        sh '''
-                            echo "${PASS}" | sudo docker login -u "${USER}" --password-stdin
-                            sudo docker push perconalab/proxysql3:${VERSION}-${RPM_RELEASE}
-
-                            PROXYSQL_MAJOR_VERSION=$(echo $VERSION | cut -d'.' -f1)
-                            PROXYSQL_MINOR_VERSION=$(echo $VERSION | cut -d'.' -f2)
-                            PROXYSQL_PATCH_VERSION=$(echo $VERSION | cut -d'.' -f3)
-
-                            docker tag perconalab/proxysql3:${VERSION}-${RPM_RELEASE} perconalab/proxysql3:${PROXYSQL_MAJOR_VERSION}.${PROXYSQL_MINOR_VERSION}.${PROXYSQL_PATCH_VERSION}
-                            docker tag perconalab/proxysql3:${VERSION}-${RPM_RELEASE} perconalab/proxysql3:${PROXYSQL_MAJOR_VERSION}.${PROXYSQL_MINOR_VERSION}
-                            docker tag perconalab/proxysql3:${VERSION}-${RPM_RELEASE} perconalab/proxysql3:${PROXYSQL_MAJOR_VERSION}
-
-                            sudo docker push perconalab/proxysql3:${PROXYSQL_MAJOR_VERSION}.${PROXYSQL_MINOR_VERSION}.${PROXYSQL_PATCH_VERSION}
-                            sudo docker push perconalab/proxysql3:${PROXYSQL_MAJOR_VERSION}.${PROXYSQL_MINOR_VERSION}
-                            sudo docker push perconalab/proxysql3:${PROXYSQL_MAJOR_VERSION}
-
-                        '''
-                    }
-                }
             }
         }
     }
