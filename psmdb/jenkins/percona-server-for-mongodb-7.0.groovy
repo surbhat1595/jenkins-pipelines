@@ -126,7 +126,7 @@ pipeline {
                 label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker'
             }
             steps {
-                slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
+                //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
                 cleanUpWS()
                 script {
                     if (env.FULL_FEATURED == 'yes') {
@@ -176,7 +176,7 @@ pipeline {
                         uploadRPMfromAWS(params.CLOUD, "srpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Build PSMDB generic source deb') {
+                /*stage('Build PSMDB generic source deb') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
@@ -193,7 +193,7 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
                         uploadDEBfromAWS(params.CLOUD, "source_deb/", AWS_STASH_PATH)
                     }
-                }
+                } */
             }  //parallel
         } // stage
         stage('Build PSMDB RPMs/DEBs/Binary tarballs') {
@@ -218,7 +218,7 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Oracle Linux 8(aarch64)') {
+               /* stage('Oracle Linux 8(aarch64)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
                     }
@@ -234,7 +234,7 @@ pipeline {
                         }
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
-                }
+                } */
                 stage('Oracle Linux 9(x86_64)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
@@ -252,7 +252,7 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Oracle Linux 9(aarch64)') {
+               /* stage('Oracle Linux 9(aarch64)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
                     }
@@ -520,7 +520,7 @@ pipeline {
                             pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
                         }
                     }
-                }
+                } */
             }
         }
 
@@ -535,8 +535,8 @@ pipeline {
                 cleanUpWS()
 
                 uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
-                uploadTarballfromAWS(params.CLOUD, "tarball/", AWS_STASH_PATH, 'binary')
+               // uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
+              //  uploadTarballfromAWS(params.CLOUD, "tarball/", AWS_STASH_PATH, 'binary')
             }
         }
 
@@ -546,7 +546,7 @@ pipeline {
             }
             steps {
                 signRPM()
-                signDEB()
+               // signDEB()
             }
         }
         stage('Push to public repository') {
@@ -564,7 +564,7 @@ pipeline {
                 }
             }
         }
-        stage('Push Tarballs to TESTING download area') {
+       /* stage('Push Tarballs to TESTING download area') {
             when {
                 expression { return params.BUILD_PACKAGES == 'true' }
             }
@@ -589,7 +589,7 @@ pipeline {
                     }
                 }
             }
-        }
+        } */
         stage ('Build docker containers for aws ecr') {
             when {
                 allOf {
@@ -865,7 +865,7 @@ pipeline {
     }
     post {
         success {
-            slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
             script {
                 if (env.FULL_FEATURED == 'yes') {
                     currentBuild.description = "!!! PRO Built on ${GIT_BRANCH}. Path to packages: experimental/${AWS_STASH_PATH}"
@@ -876,7 +876,7 @@ pipeline {
             deleteDir()
         }
         failure {
-            slackNotify("#releases-ci", "#FF0000", "[${JOB_NAME}]: build failed for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases-ci", "#FF0000", "[${JOB_NAME}]: build failed for ${GIT_BRANCH} - [${BUILD_URL}]")
             deleteDir()
         }
         always {

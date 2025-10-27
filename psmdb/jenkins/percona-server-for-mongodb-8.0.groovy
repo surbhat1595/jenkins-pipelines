@@ -123,7 +123,7 @@ pipeline {
                 label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker'
             }
             steps {
-                slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
+                //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: starting build for ${GIT_BRANCH} - [${BUILD_URL}]")
                 cleanUpWS()
                 script {
                     if (env.FULL_FEATURED == 'yes') {
@@ -149,7 +149,7 @@ pipeline {
                 uploadTarballfromAWS(params.CLOUD, "source_tarball/", AWS_STASH_PATH, 'source')
             }
         }
-        stage('Build PSMDB generic source packages') {
+        /* stage('Build PSMDB generic source packages') {
             when {
                 expression { return params.BUILD_PACKAGES == 'true' }
             }
@@ -192,47 +192,13 @@ pipeline {
                     }
                 }
             }  //parallel
-        } // stage
+        } // stage */
         stage('Build PSMDB RPMs/DEBs/Binary tarballs') {
             when {
                 expression { return params.BUILD_PACKAGES == 'true' }
             }
             parallel {
-                stage('Oracle Linux 8(x86_64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("oraclelinux:8", "--build_rpm=1 --full_featured=1")
-                            } else {
-                                buildStage("oraclelinux:8", "--build_rpm=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Oracle Linux 8(aarch64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("oraclelinux:8", "--build_rpm=1 --full_featured=1")
-                            } else {
-                                buildStage("oraclelinux:8", "--build_rpm=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Oracle Linux 9(x86_64)') {
+               /*  stage('Oracle Linux 9(x86_64)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
@@ -249,58 +215,7 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Oracle Linux 9(aarch64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("oraclelinux:9", "--build_rpm=1 --full_featured=1")
-                            } else {
-                                buildStage("oraclelinux:9", "--build_rpm=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Amazon Linux 2023(x86_64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("amazonlinux:2023", "--build_rpm=1 --full_featured=1")
-                            } else {
-                                buildStage("amazonlinux:2023", "--build_rpm=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Amazon Linux 2023(aarch64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("amazonlinux:2023", "--build_rpm=1 --full_featured=1")
-                            } else {
-                                buildStage("amazonlinux:2023", "--build_rpm=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Ubuntu Jammy(22.04)(x86_64)') {
+               stage('Ubuntu Jammy(22.04)(x86_64)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
                     }
@@ -316,92 +231,7 @@ pipeline {
                         }
                         pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
                     }
-                }
-                stage('Ubuntu Jammy(22.04)(aarch64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("ubuntu:jammy", "--build_deb=1 --full_featured=1")
-                            } else {
-                                buildStage("ubuntu:jammy", "--build_deb=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Ubuntu Noble(24.04)(x86_64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("ubuntu:noble", "--build_deb=1 --full_featured=1")
-                            } else {
-                                buildStage("ubuntu:noble", "--build_deb=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Ubuntu Noble(24.04)(aarch64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-64gb-aarch64'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("ubuntu:noble", "--build_deb=1 --full_featured=1")
-                            } else {
-                                buildStage("ubuntu:noble", "--build_deb=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Debian Bookworm(12)(x86_64)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("debian:bookworm", "--build_deb=1 --full_featured=1")
-                            } else {
-                                buildStage("debian:bookworm", "--build_deb=1")
-                            }
-                        }
-                        pushArtifactFolder(params.CLOUD, "deb/", AWS_STASH_PATH)
-                    }
-                }
-                stage('Oracle Linux 8 binary tarball(glibc2.28)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("oraclelinux:8", "--build_tarball=1 --full_featured=1")
-                            } else {
-                                buildStage("oraclelinux:8", "--build_tarball=1")
-                            }
-                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
-                        }
-                    }
-                }
+                } */
                 stage('Oracle Linux 9 binary tarball(glibc2.34)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
@@ -414,23 +244,6 @@ pipeline {
                                 buildStage("oraclelinux:9", "--build_tarball=1 --full_featured=1")
                             } else {
                                 buildStage("oraclelinux:9", "--build_tarball=1")
-                            }
-                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
-                        }
-                    }
-                }
-                stage('Amazon Linux 2023 binary tarball(glibc2.34)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("amazonlinux:2023", "--build_tarball=1 --full_featured=1")
-                            } else {
-                                buildStage("amazonlinux:2023", "--build_tarball=1")
                             }
                             pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
                         }
@@ -453,40 +266,6 @@ pipeline {
                         }
                     }
                 }
-                stage('Ubuntu Noble(24.04) binary tarball(glibc2.39)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("ubuntu:noble", "--build_tarball=1 --full_featured=1")
-                            } else {
-                                buildStage("ubuntu:noble", "--build_tarball=1")
-                            }
-                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
-                        }
-                    }
-                }
-                stage('Debian Bookworm(12) binary tarball(glibc2.36)') {
-                    agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-64gb'
-                    }
-                    steps {
-                        cleanUpWS()
-                        popArtifactFolder(params.CLOUD, "source_tarball/", AWS_STASH_PATH)
-                        script {
-                            if (env.FULL_FEATURED == 'yes') {
-                                buildStage("debian:bookworm", "--build_tarball=1 --full_featured=1")
-                            } else {
-                                buildStage("debian:bookworm", "--build_tarball=1")
-                            }
-                            pushArtifactFolder(params.CLOUD, "tarball/", AWS_STASH_PATH)
-                        }
-                    }
-                }
             }
         }
 
@@ -500,13 +279,13 @@ pipeline {
             steps {
                 cleanUpWS()
 
-                uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
-                uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
+                //uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
+                //uploadDEBfromAWS(params.CLOUD, "deb/", AWS_STASH_PATH)
                 uploadTarballfromAWS(params.CLOUD, "tarball/", AWS_STASH_PATH, 'binary')
             }
         }
 
-        stage('Sign packages') {
+       /* stage('Sign packages') {
             when {
                 expression { return params.BUILD_PACKAGES == 'true' }
             }
@@ -514,8 +293,8 @@ pipeline {
                 signRPM()
                 signDEB()
             }
-        }
-        stage('Push to public repository') {
+        } */
+       /* stage('Push to public repository') {
             when {
                 expression { return params.BUILD_PACKAGES == 'true' }
             }
@@ -529,7 +308,7 @@ pipeline {
                     }
                 }
             }
-        }
+        } */
         stage('Push Tarballs to TESTING download area') {
             when {
                 expression { return params.BUILD_PACKAGES == 'true' }
@@ -829,7 +608,7 @@ pipeline {
     }
     post {
         success {
-            slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases-ci", "#00FF00", "[${JOB_NAME}]: build has been finished successfully for ${GIT_BRANCH} - [${BUILD_URL}]")
             script {
                 if (env.FULL_FEATURED == 'yes') {
                     currentBuild.description = "!!! PRO Built on ${GIT_BRANCH}. Path to packages: experimental/${AWS_STASH_PATH}"
@@ -840,7 +619,7 @@ pipeline {
             deleteDir()
         }
         failure {
-            slackNotify("#releases-ci", "#FF0000", "[${JOB_NAME}]: build failed for ${GIT_BRANCH} - [${BUILD_URL}]")
+            //slackNotify("#releases-ci", "#FF0000", "[${JOB_NAME}]: build failed for ${GIT_BRANCH} - [${BUILD_URL}]")
             deleteDir()
         }
         always {
