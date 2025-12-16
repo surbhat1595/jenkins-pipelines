@@ -129,7 +129,7 @@ pipeline {
                         uploadRPMfromAWS(params.CLOUD, "srpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Build MYSQL-SHELL generic source deb') {
+                /*stage('Build MYSQL-SHELL generic source deb') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
@@ -141,7 +141,7 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "source_deb/", AWS_STASH_PATH)
                         uploadDEBfromAWS(params.CLOUD, "source_deb/", AWS_STASH_PATH)
                     }
-                }
+                } */
             }  //parallel
         } // stage
         stage('Build MYSQL-SHELL RPMs/DEBs/Binary tarballs') {
@@ -161,7 +161,7 @@ pipeline {
                     }
                 }
 */
-                stage('Oracle Linux 8') {
+               /* stage('Oracle Linux 8') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
@@ -212,8 +212,8 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
-                }
-                stage('Oracle Linux 10') {
+                } */
+                stage('Amazon Linux 2023') {
                     when {
                         expression { true }
                     }
@@ -223,13 +223,13 @@ pipeline {
                     steps {
                         cleanUpWS()
                         popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        buildStage("oraclelinux:10", "--build_rpm=1")
+                        buildStage("amazonlinux:2023", "--build_rpm=1")
 
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Oracle Linux 10 ARM') {
+                stage('Amazon Linux 2023 ARM') {
                     when {
                         expression { true }
                     }
@@ -239,13 +239,13 @@ pipeline {
                     steps {
                         cleanUpWS()
                         popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        buildStage("oraclelinux:10", "--build_rpm=1")
+                        buildStage("amazonlinux:2023", "--build_rpm=1")
 
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Ubuntu Focal (20.04)') {
+               /* stage('Ubuntu Focal (20.04)') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
@@ -451,14 +451,14 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "test/tarball/", AWS_STASH_PATH)
                         uploadTarballfromAWS(params.CLOUD, "test/tarball/", AWS_STASH_PATH, 'binary')
                     }
-                }
+                }*/
             }
         }
 
         stage('Sign packages') {
             steps {
                 signRPM()
-                signDEB()
+               // signDEB()
             }
         }
         stage('Push to public repository') {

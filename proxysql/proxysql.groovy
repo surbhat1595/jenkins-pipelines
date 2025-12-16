@@ -116,7 +116,7 @@ pipeline {
             parallel {
                 stage('Build PROXYSQL generic source rpm') {
                     agent {
-                        label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-32gb-aarch64'
+                        label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
                     steps {
                         cleanUpWS()
@@ -127,7 +127,7 @@ pipeline {
                         uploadRPMfromAWS(params.CLOUD, "srpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Build PROXYSQL generic source deb') {
+                /*stage('Build PROXYSQL generic source deb') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
@@ -169,34 +169,34 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
-                }
-                stage('Oracle Linux 9') {
+                } */
+                stage('Amazon Linux 2023') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
                     steps {
                         cleanUpWS()
                         popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        buildStage("oraclelinux:9", "--build_rpm=1")
+                        buildStage("amazonlinux:2023", "--build_rpm=1")
             
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 } 
-                stage('Oracle Linux 9 ARM') {
+                stage('Amazon Linux 2023 ARM') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-32gb-aarch64'
                     }
                     steps {
                         cleanUpWS()
                         popArtifactFolder(params.CLOUD, "srpm/", AWS_STASH_PATH)
-                        buildStage("oraclelinux:9", "--build_rpm=1")
+                        buildStage("amazonlinux:2023", "--build_rpm=1")
 
                         pushArtifactFolder(params.CLOUD, "rpm/", AWS_STASH_PATH)
                         uploadRPMfromAWS(params.CLOUD, "rpm/", AWS_STASH_PATH)
                     }
                 }
-                stage('Oracle Linux 10') {
+               /* stage('Oracle Linux 10') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-x64-min' : 'docker'
                     }
@@ -416,14 +416,14 @@ pipeline {
                         pushArtifactFolder(params.CLOUD, "test/tarball/", AWS_STASH_PATH)
                         uploadTarballfromAWS(params.CLOUD, "test/tarball/", AWS_STASH_PATH, 'binary')
                     }
-                }
+                }*/
             }
         }
 
         stage('Sign packages') {
             steps {
                 signRPM(params.CLOUD)
-                signDEB(params.CLOUD)
+               // signDEB(params.CLOUD)
             }
         }
         stage('Push to public repository') {
@@ -432,7 +432,7 @@ pipeline {
                 sync2ProdAutoBuild(params.CLOUD, PROXYSQL_DEST_REPO, COMPONENT)
             }
         }
-        stage('Build docker containers') {
+       /* stage('Build docker containers') {
             agent {
                 label params.CLOUD == 'Hetzner' ? 'docker-x64' : 'docker-32gb'
             }
@@ -465,8 +465,6 @@ pipeline {
                         sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
                         git clone https://github.com/percona/percona-docker
                         cd percona-docker/proxysql
-                        sed -i "s/ENV PROXYSQL_VERSION.*/ENV PROXYSQL_VERSION ${VERSION}-${RPM_RELEASE}/g" Dockerfile-proxysql2
-                        sed -i "s/enable proxysql testing/enable proxysql ${COMPONENT}/g" Dockerfile-proxysql2
                         sudo docker build --provenance=false --no-cache --platform "linux/amd64" -t perconalab/proxysql2:${VERSION}-${RPM_RELEASE}-amd64 -f Dockerfile-proxysql2 .
                         sudo docker build --provenance=false --no-cache --platform "linux/arm64" -t perconalab/proxysql2:${VERSION}-${RPM_RELEASE}-arm64 -f Dockerfile-proxysql2 .
 
@@ -501,7 +499,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
     }
     post {
         success {
