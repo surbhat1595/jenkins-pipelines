@@ -272,7 +272,7 @@ pipeline {
                         }
                     }
                 }
-                stage('Build pg_tarball 16 for OpenSSL 3.5') {
+               /* stage('Build pg_tarball 16 for OpenSSL 3.5') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-32gb-aarch64'
                     }
@@ -349,8 +349,8 @@ pipeline {
 				uploadTarballToTestingDownloadServer("pg_tarballs", "${PACKAGE_VERSION}")
 			}
                     }
-                }
-            stage('Build pg_tarball 15 for OpenSSL 3.5') {
+                }*/
+                stage('Build pg_tarball 15 for OpenSSL 3.5') {
                     agent {
                         label params.CLOUD == 'Hetzner' ? 'docker-aarch64' : 'docker-32gb-aarch64'
                     }
