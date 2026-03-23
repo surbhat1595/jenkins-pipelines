@@ -1,8 +1,9 @@
 - job:
-    name: hetzner-postgresql-server-autobuild-RELEASE-test
+    name: PG-RELEASE-from-repository
     project-type: pipeline
     description: |
         Do not edit this job through the web!
+        Check repo.percona.com/index.html and update it if needed 
     pipeline-scm:
       scm:
         - git:
@@ -11,5 +12,4 @@
             - 'hetznerpgtar'
             wipe-workspace: false
       lightweight-checkout: true
-      script-path: ppg/postgresql_server.groovy
-
+      script-path: rel/jenkins/release-from-repository-PG.groovy
