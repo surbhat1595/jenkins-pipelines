@@ -91,12 +91,16 @@ void buildStage(String DOCKER_OS, String STAGE_PARAM) {
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.buster_amd64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.focal_amd64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.jammy_amd64.deb
+                    cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.trixie_amd64.deb
+                    cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.resolute_amd64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.noble_arm64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.bookworm_arm64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.bullseye_arm64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.buster_arm64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.focal_arm64.deb
                     cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.jammy_arm64.deb
+                    cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.trixie_arm64.deb
+                    cp ../*.deb \${build_dir}/deb/percona-release_\${VERSION}-\${RELEASE}.resolute_arm64.deb
                 "
              """
              break

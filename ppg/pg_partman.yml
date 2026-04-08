@@ -1,5 +1,5 @@
 - job:
-    name: hetzner-percona-release-RELEASE
+    name: hetzner-pg_partman-RELEASE
     project-type: pipeline
     description: |
         Do not edit this job through the web!
@@ -11,5 +11,5 @@
             - 'hetznerpgtar'
             wipe-workspace: false
       lightweight-checkout: true
-      script-path: percona-release/jenkins/percona-release.groovy
+      script-path: ppg/pg_partman.groovy
 

@@ -175,13 +175,13 @@ ENDSSH
                                             done
                                         fi
                                         # -------------------------------------> binary pushing from testing pool
-                                        for _codename in \${CODENAMES}; do
-                                            echo "<*> CODENAME: "\${_codename}
-                                            DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
-                                            for _deb in \${DEBS}; do
-                                                repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose
-                                            done
-                                        done
+                                        #for _codename in \${CODENAMES}; do
+                                        #    echo "<*> CODENAME: "\${_codename}
+                                        #    DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
+                                        #    for _deb in \${DEBS}; do
+                                        #        repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose
+                                        #    done
+                                        #done
                                         # -------------------------------------> also push to major version repo (e.g. ppg-18)
                                         MAJOR_REPO=\$(echo \${LCREPOSITORY} | cut -d. -f1)
                                         MAJOR_REPOPATH="/srv/repo-copy/\${MAJOR_REPO}/apt"
@@ -202,13 +202,13 @@ ENDSSH
                                             done
                                         fi
                                         # -------------------------------------> binary pushing to major repo
-                                        for _codename in \${MAJOR_CODENAMES}; do
-                                            echo "<*> CODENAME: "\${_codename}
-                                            DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
-                                            for _deb in \${DEBS}; do
-                                                repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose
-                                            done
-                                    done
+                                        #for _codename in \${MAJOR_CODENAMES}; do
+                                        #    echo "<*> CODENAME: "\${_codename}
+                                        #    DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
+                                        #    for _deb in \${DEBS}; do
+                                        #        repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose
+                                        #    done
+                                        #done
                                     fi
                                     date +%s > /srv/repo-copy/version
 ENDSSH
@@ -235,12 +235,12 @@ ENDSSH
                                TARBALL_PRODUCT="Percona-PostgreSQL-Tarballs"
                                TARBALL_BASE="/srv/UPLOAD/testing/BUILDS/\${TARBALL_PRODUCT}/\${TARBALL_PRODUCT}-\${PPG_VERSION}"
                                #if [ -d \${TARBALL_BASE} ]; then
-                                   ssh -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com "cd /data/downloads/ && mkdir -p postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball"
+                                   #ssh -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com "cd /data/downloads/ && mkdir -p postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball"
                                    for TS_DIR in \$(ls -1 \${TARBALL_BASE}); do
                                        TARBALL_SRC="\${TARBALL_BASE}/\${TS_DIR}/binary/tarball"
                                        if [ -d \${TARBALL_SRC} ]; then
                                            cd \${TARBALL_SRC}
-                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="*yassl*" --progress *tar.gz jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
+                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="*yassl*" --progress --dry-run *tar.gz jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
                                        fi
                                    done
                                    # -------------------------------------> release SBOMs to downloads server
@@ -250,7 +250,7 @@ ENDSSH
                                        SBOM_SRC="\${SBOM_BASE}/\${SBOM_LATEST_TS}/json"
                                        if [ -d \${SBOM_SRC} ]; then
                                            cd \${SBOM_SRC}
-                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="yassl" --progress *json jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
+                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="yassl" --progress --dry-run *json jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
                                        fi
                                    else
                                        echo "SBOM directory \${SBOM_BASE} not found, skipping SBOM release"
@@ -311,9 +311,9 @@ ENDSSH
                                     if [ -n "\${LAST_MATCH}" ]; then
                                         INSERT_LINE=\$(tail -n +"\${LAST_MATCH}" index.html | grep -n '</tr>' | head -1 | cut -d: -f1)
                                         INSERT_LINE=\$((\${LAST_MATCH} + \${INSERT_LINE} - 1))
-                                        sed -i "\${INSERT_LINE}a <tr>\\n <td><a href=\\"\${LCREPOSITORY}/\\">\${LCREPOSITORY}/<\\/a><\\/td>\\n <\\/tr>" index.html
+                                        sed -i "\${INSERT_LINE}a\\            <tr>\\n              <td><a href=\\"\${LCREPOSITORY}/\\">\${LCREPOSITORY}/<\\/a><\\/td>\\n            <\\/tr>" index.html
                                     else
-                                        sed -i "/<\\/table>/i <tr>\\n <td><a href=\\"\${LCREPOSITORY}/\\">\${LCREPOSITORY}/<\\/a><\\/td>\\n <\\/tr>" index.html
+                                        sed -i "/<\\/table>/i\\            <tr>\\n              <td><a href=\\"\${LCREPOSITORY}/\\">\${LCREPOSITORY}/<\\/a><\\/td>\\n            <\\/tr>" index.html
                                     fi
                                     echo "Added \${LCREPOSITORY} to index.html"
                                 else
