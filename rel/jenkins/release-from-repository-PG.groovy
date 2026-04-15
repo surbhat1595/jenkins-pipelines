@@ -13,11 +13,10 @@ pipeline {
              description: 'Cloud infra for build',
              name: 'CLOUD' )
         string(
-            defaultValue: 'PPG-TEST-16.13',
+            defaultValue: 'PPG-16.13',
             description: 'separate repository to push to. Please use CAPS letters.',
             name: 'REPOSITORY')
         booleanParam(name: 'REVERSE', defaultValue: false, description: 'please use reverse sync if you want to fix repo copy on signing server. it will be overwritten with known working copy from production')
-        booleanParam(name: 'REMOVE_BEFORE_PUSH', defaultValue: false, description: 'check to remove sources and binary version if equals pushing')
         booleanParam(name: 'REMOVE_LOCKFILE', defaultValue: false, description: 'remove lockfile after unsuccessful push')
         choice(
             choices: 'TESTING\nRELEASE\nEXPERIMENTAL\nLABORATORY',
@@ -89,7 +88,7 @@ pipeline {
                                         # -------------------------------------> also copy packages to major version repo (e.g. ppg-18)
                                         MAJOR_REPO=\$(echo \${LCREPOSITORY} | cut -d. -f1)
                                         MAJOR_REPOPATH="repo-copy/\${MAJOR_REPO}/yum"
-                                        #echo "Copying packages from \${LCREPOSITORY} testing to \${MAJOR_REPO} release"
+                                        echo "Copying packages from \${LCREPOSITORY} testing to \${MAJOR_REPO} release"
                                         # -------------------------------------> source processing for major repo
                                         for rhel in \${RHVERS}; do
                                             if [ -d \${TESTING_PATH}/\${rhel}/SRPMS ]; then
@@ -142,12 +141,8 @@ ENDSSH
                                 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ${KEY_PATH} ${USER}@repo.ci.percona.com << 'ENDSSH'
                                     set -o errexit
                                     set -o xtrace
-                                    REPOPUSH_ARGS=""
                                     REPOCOMP=\$(echo "${COMPONENT}" | tr '[:upper:]' '[:lower:]')
                                     LCREPOSITORY=\$(echo "${REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-                                    if [ ${REMOVE_BEFORE_PUSH} = true ]; then
-                                        REPOPUSH_ARGS=" --remove-package "
-                                    fi
                                     export PATH="/usr/local/reprepro5/bin:\${PATH}"
                                     export REPOPATH="/srv/repo-copy/\${LCREPOSITORY}/apt"
                                     set -e
@@ -175,13 +170,13 @@ ENDSSH
                                             done
                                         fi
                                         # -------------------------------------> binary pushing from testing pool
-                                        #for _codename in \${CODENAMES}; do
-                                        #    echo "<*> CODENAME: "\${_codename}
-                                        #    DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
-                                        #    for _deb in \${DEBS}; do
-                                        #        repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose
-                                        #    done
-                                        #done
+                                        for _codename in \${CODENAMES}; do
+                                            echo "<*> CODENAME: "\${_codename}
+                                            DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
+                                            for _deb in \${DEBS}; do
+                                                repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose
+                                            done
+                                        done
                                         # -------------------------------------> also push to major version repo (e.g. ppg-18)
                                         MAJOR_REPO=\$(echo \${LCREPOSITORY} | cut -d. -f1)
                                         MAJOR_REPOPATH="/srv/repo-copy/\${MAJOR_REPO}/apt"
@@ -196,19 +191,19 @@ ENDSSH
                                                 echo "<*> DSC file is "\${DSC_FILE}
                                                 for _codename in \${MAJOR_CODENAMES}; do
                                                     echo "<*> CODENAME: "\${_codename}
-                                                    repopush --gpg-pass=${SIGN_PASSWORD} --package=\${DSC_FILE} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose \${REPOPUSH_ARGS} || true
+                                                    repopush --gpg-pass=${SIGN_PASSWORD} --package=\${DSC_FILE} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose || true
                                                     sleep 5
                                                 done
                                             done
                                         fi
                                         # -------------------------------------> binary pushing to major repo
-                                        #for _codename in \${MAJOR_CODENAMES}; do
-                                        #    echo "<*> CODENAME: "\${_codename}
-                                        #    DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
-                                        #    for _deb in \${DEBS}; do
-                                        #        repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose
-                                        #    done
-                                        #done
+                                        for _codename in \${MAJOR_CODENAMES}; do
+                                            echo "<*> CODENAME: "\${_codename}
+                                            DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
+                                            for _deb in \${DEBS}; do
+                                                repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose
+                                            done
+                                        done
                                     fi
                                     date +%s > /srv/repo-copy/version
 ENDSSH
@@ -234,13 +229,13 @@ ENDSSH
                                # -------------------------------------> release tarballs to downloads server
                                TARBALL_PRODUCT="Percona-PostgreSQL-Tarballs"
                                TARBALL_BASE="/srv/UPLOAD/testing/BUILDS/\${TARBALL_PRODUCT}/\${TARBALL_PRODUCT}-\${PPG_VERSION}"
-                               #if [ -d \${TARBALL_BASE} ]; then
-                                   #ssh -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com "cd /data/downloads/ && mkdir -p postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball"
+                               if [ -d \${TARBALL_BASE} ]; then
+                                   ssh -p 2222 jenkins-deploy.jenkins-deploy.web.r.int.percona.com "cd /data/downloads/ && mkdir -p postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball"
                                    for TS_DIR in \$(ls -1 \${TARBALL_BASE}); do
                                        TARBALL_SRC="\${TARBALL_BASE}/\${TS_DIR}/binary/tarball"
                                        if [ -d \${TARBALL_SRC} ]; then
                                            cd \${TARBALL_SRC}
-                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="*yassl*" --progress --dry-run *tar.gz jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
+                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="*yassl*" --progress *tar.gz jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
                                        fi
                                    done
                                    # -------------------------------------> release SBOMs to downloads server
@@ -250,14 +245,14 @@ ENDSSH
                                        SBOM_SRC="\${SBOM_BASE}/\${SBOM_LATEST_TS}/json"
                                        if [ -d \${SBOM_SRC} ]; then
                                            cd \${SBOM_SRC}
-                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="yassl" --progress --dry-run *json jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
+                                           rsync -avt -e "ssh -p 2222" --bwlimit=50000 --exclude="yassl" --progress *json jenkins-deploy.jenkins-deploy.web.r.int.percona.com:/data/downloads/postgresql-distribution-\${PG_MAJOR}/\${PPG_VERSION}/binary/tarball/
                                        fi
                                    else
                                        echo "SBOM directory \${SBOM_BASE} not found, skipping SBOM release"
                                    fi
-                               #else
-                               #    echo "Tarball directory \${TARBALL_BASE} not found, skipping tarball release"
-                               #fi
+                               else
+                                   echo "Tarball directory \${TARBALL_BASE} not found, skipping tarball release"
+                               fi
                                fi
 ENDSSH
                        else

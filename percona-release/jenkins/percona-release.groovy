@@ -1,6 +1,6 @@
-library changelog: false, identifier: 'lib@hetzner', retriever: modernSCM([
+library changelog: false, identifier: 'lib@hetznerpgtar', retriever: modernSCM([
     $class: 'GitSCMSource',
-    remote: 'https://github.com/Percona-Lab/jenkins-pipelines.git'
+    remote: 'https://github.com/surbhat1595/jenkins-pipelines.git'
 ]) _
 
 void buildStage(String DOCKER_OS, String STAGE_PARAM) {
@@ -265,7 +265,7 @@ pipeline {
         stage('Push to public repository') {
             steps {
                 // sync packages
-                sync2ProdAutoBuild(params.CLOUD, 'prel', COMPONENT)
+                sync2ProdAutoBuildPREL(params.CLOUD, 'prel', COMPONENT)
             }
         }
 
