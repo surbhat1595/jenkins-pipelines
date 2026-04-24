@@ -1,5 +1,5 @@
 - job:
-    name: PG-RELEASE-from-repository
+    name: PPG-promote-testing-to-release
     project-type: pipeline
     description: |
         Do not edit this job through the web!
@@ -12,4 +12,4 @@
             - 'hetznerpgtar'
             wipe-workspace: false
       lightweight-checkout: true
-      script-path: rel/jenkins/release-from-repository-PG.groovy
+      script-path: rel/jenkins/ppg-promote-testing-to-release.groovy
