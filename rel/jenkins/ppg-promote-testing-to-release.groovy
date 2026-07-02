@@ -59,12 +59,21 @@ RHVERS=\$(ls -1 \${TESTING_PATH} | grep -E '^[0-9]+\$')
 for rhel in \${RHVERS}; do
     if [ -d \${TESTING_PATH}/\${rhel}/SRPMS ]; then
         mkdir -p /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS
-        cp -av \${TESTING_PATH}/\${rhel}/SRPMS/*.rpm /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/
-        createrepo --update /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS
-        if [[ -f /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc ]]; then
-            rm -f /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc
+        # TEMPORARY: DEB-only run for resolute; RPM stage should be skipped via
+        # SKIP_RPM_PUSH. As a defensive no-op the filter is set to a pattern
+        # that no RPM ever matches (RPMs carry no Debian codename in the name).
+        # Restore the plain `*.rpm` glob when normal promotion resumes.
+        SRPM_COUNT=\$(find \${TESTING_PATH}/\${rhel}/SRPMS -maxdepth 1 -type f -name '*resolute*.rpm' 2>/dev/null | wc -l)
+        if [ \${SRPM_COUNT} -gt 0 ]; then
+            cp -av \${TESTING_PATH}/\${rhel}/SRPMS/*resolute*.rpm /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/
+            createrepo --update /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS
+            if [[ -f /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc ]]; then
+                rm -f /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc
+            fi
+            gpg --detach-sign --armor --passphrase $SIGN_PASSWORD /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml
+        else
+            echo "<*> [SKIP] no matching *resolute*.rpm SRPMs in \${TESTING_PATH}/\${rhel}/SRPMS (this is a DEB-only resolute promotion run)"
         fi
-        gpg --detach-sign --armor --passphrase $SIGN_PASSWORD /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml
     fi
 done
 
@@ -74,17 +83,23 @@ for rhel in \${RHVERS}; do
         mkdir -p /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS
         for arch in \$(ls -1 \${TESTING_PATH}/\${rhel}/RPMS); do
             mkdir -p /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}
-            RPM_COUNT=\$(find \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/ -maxdepth 1 -name '*.rpm' 2>/dev/null | wc -l)
+            # TEMPORARY: DEB-only run for resolute; RPM stage should be skipped via
+            # SKIP_RPM_PUSH. As a defensive no-op the filter is set to a pattern
+            # that no RPM ever matches (RPMs carry no Debian codename in the name).
+            # Restore the plain `*.rpm` glob AND the else-branch repodata sync
+            # when normal promotion resumes -- we intentionally skip that sync
+            # now so we don't wipe existing destination repodata for arches
+            # with no matching packages this run.
+            RPM_COUNT=\$(find \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/ -maxdepth 1 -name '*resolute*.rpm' 2>/dev/null | wc -l)
             if [ \${RPM_COUNT} -gt 0 ]; then
-                cp -av \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/*.rpm /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
+                cp -av \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/*resolute*.rpm /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
                 createrepo --update /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
                 if [ -f /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata/repomd.xml.asc ]; then
                     rm -f /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata/repomd.xml.asc
                 fi
                 gpg --detach-sign --armor --passphrase $SIGN_PASSWORD /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata/repomd.xml
             else
-                rm -rf /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata
-                cp -av \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/repodata /srv/\${REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
+                echo "<*> [SKIP] no matching *resolute*.rpm RPMs in \${TESTING_PATH}/\${rhel}/RPMS/\${arch} (this is a DEB-only resolute promotion run)"
             fi
         done
     fi
@@ -99,12 +114,21 @@ echo "Copying packages from \${LCREPOSITORY} testing to \${MAJOR_REPO} release"
 for rhel in \${RHVERS}; do
     if [ -d \${TESTING_PATH}/\${rhel}/SRPMS ]; then
         mkdir -p /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS
-        cp -av \${TESTING_PATH}/\${rhel}/SRPMS/*.rpm /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/
-        createrepo --update /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS
-        if [[ -f /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc ]]; then
-            rm -f /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc
+        # TEMPORARY: DEB-only run for resolute; RPM stage should be skipped via
+        # SKIP_RPM_PUSH. As a defensive no-op the filter is set to a pattern
+        # that no RPM ever matches (RPMs carry no Debian codename in the name).
+        # Restore the plain `*.rpm` glob when normal promotion resumes.
+        SRPM_COUNT=\$(find \${TESTING_PATH}/\${rhel}/SRPMS -maxdepth 1 -type f -name '*resolute*.rpm' 2>/dev/null | wc -l)
+        if [ \${SRPM_COUNT} -gt 0 ]; then
+            cp -av \${TESTING_PATH}/\${rhel}/SRPMS/*resolute*.rpm /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/
+            createrepo --update /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS
+            if [[ -f /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc ]]; then
+                rm -f /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml.asc
+            fi
+            gpg --detach-sign --armor --passphrase $SIGN_PASSWORD /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml
+        else
+            echo "<*> [SKIP] no matching *resolute*.rpm SRPMs in \${TESTING_PATH}/\${rhel}/SRPMS for major repo (this is a DEB-only resolute promotion run)"
         fi
-        gpg --detach-sign --armor --passphrase $SIGN_PASSWORD /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/SRPMS/repodata/repomd.xml
     fi
 done
 
@@ -114,17 +138,23 @@ for rhel in \${RHVERS}; do
         mkdir -p /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS
         for arch in \$(ls -1 \${TESTING_PATH}/\${rhel}/RPMS); do
             mkdir -p /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}
-            RPM_COUNT=\$(find \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/ -maxdepth 1 -name '*.rpm' 2>/dev/null | wc -l)
+            # TEMPORARY: DEB-only run for resolute; RPM stage should be skipped via
+            # SKIP_RPM_PUSH. As a defensive no-op the filter is set to a pattern
+            # that no RPM ever matches (RPMs carry no Debian codename in the name).
+            # Restore the plain `*.rpm` glob AND the else-branch repodata sync
+            # when normal promotion resumes -- we intentionally skip that sync
+            # now so we don't wipe existing destination repodata for arches
+            # with no matching packages this run.
+            RPM_COUNT=\$(find \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/ -maxdepth 1 -name '*resolute*.rpm' 2>/dev/null | wc -l)
             if [ \${RPM_COUNT} -gt 0 ]; then
-                cp -av \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/*.rpm /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
+                cp -av \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/*resolute*.rpm /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
                 createrepo --update /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
                 if [ -f /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata/repomd.xml.asc ]; then
                     rm -f /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata/repomd.xml.asc
                 fi
                 gpg --detach-sign --armor --passphrase $SIGN_PASSWORD /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata/repomd.xml
             else
-                rm -rf /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/repodata
-                cp -av \${TESTING_PATH}/\${rhel}/RPMS/\${arch}/repodata /srv/\${MAJOR_REPOPATH}/\${REPOCOMP}/\${rhel}/RPMS/\${arch}/
+                echo "<*> [SKIP] no matching *resolute*.rpm RPMs in \${TESTING_PATH}/\${rhel}/RPMS/\${arch} for major repo (this is a DEB-only resolute promotion run)"
             fi
         done
     fi
@@ -167,13 +197,53 @@ CODENAMES=\$(awk '/^Codename:/ {print \$2}' \${REPOPATH}/conf/distributions)
 echo "<*> Distributions are: "\${CODENAMES}
 
 # -------------------------------------> source pushing from testing pool
+# Skip the .dsc push when the source package is already in the versioned repo
+# pool. Two complementary checks:
+#   (a) the .dsc itself by full filename -- covers native packages (no
+#       orig.tar.gz) and any same-full-version re-push (rebuild collision).
+#   (b) the orig.tar.gz by upstream-version filename -- covers quilt-format
+#       packages where only the Debian revision is bumped and the orig.tar.gz
+#       from the previous revision would collide.
 DSC=\$(find \${REPOPATH}/pool/testing/ -type f -name '*.dsc' 2>/dev/null || true)
 if [ -n "\${DSC}" ]; then
     for DSC_FILE in \${DSC}; do
         echo "<*> DSC file is "\${DSC_FILE}
+        SRCNAME=\$(grep -m1 "^Source:" \${DSC_FILE}  | sed "s/^Source: *//")
+        FULLVER=\$(grep -m1 "^Version:" \${DSC_FILE} | sed "s/^Version: *//")
+        UPVER="\${FULLVER%-*}"
+        _dsc_base=\$(basename \${DSC_FILE})
+        # TEMPORARY: only promote any *_3.5.7-1 or *_0.8.3-1 DEB packages for the
+        # resolute codename this run (both minor and major repos are targeted).
+        # The resolute-only guard on the codename loop below prevents pushes to
+        # other codenames. RPM promotion should be skipped via SKIP_RPM_PUSH
+        # (RPMs have no codename concept); the RPM filter is set to a
+        # never-matching *resolute*.rpm as a defensive no-op. Anything already
+        # in the target pool/main is skipped by the dsc/deb duplicate-check
+        # below, so reruns are safe. Everything else is filtered out here.
+        # Remove this block when normal promotion resumes.
+        if [[ "\${_dsc_base}" != *_3.5.7-1* && "\${_dsc_base}" != *_0.8.3-1* ]]; then
+            echo "<*> [SKIP] \${_dsc_base} source push to versioned repo (only 3.5.7-1 and 0.8.3-1 DEB packages for the resolute codename are being promoted this run)"
+            continue
+        fi
+        EXISTING_DSC=\$(find \${REPOPATH}/pool/main -type f -name "\${_dsc_base}" 2>/dev/null | head -1)
+        if [ -n "\${EXISTING_DSC}" ]; then
+            echo "<*> Skipping \${SRCNAME} \${FULLVER} source push to versioned repo: dsc already in pool (\${EXISTING_DSC})"
+            continue
+        fi
+        EXISTING_ORIG=\$(find \${REPOPATH}/pool/main -type f -name "\${SRCNAME}_\${UPVER}.orig.tar.gz" 2>/dev/null | head -1)
+        if [ -n "\${EXISTING_ORIG}" ]; then
+            echo "<*> Skipping \${SRCNAME} \${UPVER} source push to versioned repo: orig tarball already in pool (\${EXISTING_ORIG})"
+            continue
+        fi
+        echo "<*> Pushing \${SRCNAME} \${FULLVER} source to versioned repo (not yet in pool)"
         for _codename in \${CODENAMES}; do
+            # TEMPORARY: only push to the resolute codename this run.
+            if [[ "\${_codename}" != resolute ]]; then
+                echo "<*> [SKIP] \${_dsc_base} source push to versioned repo for codename \${_codename} (only resolute is being promoted this run)"
+                continue
+            fi
             echo "<*> CODENAME: "\${_codename}
-            repopush --gpg-pass=${SIGN_PASSWORD} --package=\${DSC_FILE} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose || true
+            repopush --gpg-pass=${SIGN_PASSWORD} --package=\${DSC_FILE} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose
             sleep 5
         done
     done
@@ -181,9 +251,40 @@ fi
 
 # -------------------------------------> binary pushing from testing pool
 for _codename in \${CODENAMES}; do
+    # TEMPORARY: only push to the resolute codename this run.
+    if [[ "\${_codename}" != resolute ]]; then
+        echo "<*> [SKIP] binary push to versioned repo for codename \${_codename} (only resolute is being promoted this run)"
+        continue
+    fi
     echo "<*> CODENAME: "\${_codename}
     DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
     for _deb in \${DEBS}; do
+        _deb_base=\$(basename \${_deb})
+        # TEMPORARY: only promote any *_3.5.7-1 or *_0.8.3-1 DEB packages for the
+        # resolute codename this run (both minor and major repos are targeted).
+        # The resolute-only guard on the codename loop below prevents pushes to
+        # other codenames. RPM promotion should be skipped via SKIP_RPM_PUSH
+        # (RPMs have no codename concept); the RPM filter is set to a
+        # never-matching *resolute*.rpm as a defensive no-op. Anything already
+        # in the target pool/main is skipped by the dsc/deb duplicate-check
+        # below, so reruns are safe. Everything else is filtered out here.
+        # Remove this block when normal promotion resumes.
+        if [[ "\${_deb_base}" != *_3.5.7-1* && "\${_deb_base}" != *_0.8.3-1* ]]; then
+            echo "<*> [SKIP] \${_deb_base} binary push to versioned repo (only 3.5.7-1 and 0.8.3-1 DEB packages for the resolute codename are being promoted this run)"
+            continue
+        fi
+        # Skip binaries already present in the versioned repo pool. Covers two
+        # cases: (a) a prior (possibly partial) run already pushed this exact
+        # file -- a re-push would be a no-op but wastes time; and (b) an older
+        # build with the same filename but different checksums is in pool/main
+        # and would make reprepro error out on hash mismatch. Codename is baked
+        # into every .deb filename (e.g. *.bullseye_amd64.deb), so a basename
+        # match in pool/main unambiguously means this codename's slot is filled.
+        EXISTING_DEB=\$(find \${REPOPATH}/pool/main -type f -name "\${_deb_base}" 2>/dev/null | head -1)
+        if [ -n "\${EXISTING_DEB}" ]; then
+            echo "<*> Skipping \${_deb_base} binary push to versioned repo: deb already in pool (\${EXISTING_DEB})"
+            continue
+        fi
         repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${REPOPATH} --component=\${REPOCOMP} --codename=\${_codename} --verbose
     done
 done
@@ -207,7 +308,21 @@ if [ -n "\${DSC}" ]; then
         SRCNAME=\$(grep -m1 "^Source:" \${DSC_FILE}  | sed "s/^Source: *//")
         FULLVER=\$(grep -m1 "^Version:" \${DSC_FILE} | sed "s/^Version: *//")
         UPVER="\${FULLVER%-*}"
-        EXISTING_DSC=\$(find \${MAJOR_REPOPATH}/pool/main -type f -name "\$(basename \${DSC_FILE})" 2>/dev/null | head -1)
+        _dsc_base=\$(basename \${DSC_FILE})
+        # TEMPORARY: only promote any *_3.5.7-1 or *_0.8.3-1 DEB packages for the
+        # resolute codename this run (both minor and major repos are targeted).
+        # The resolute-only guard on the codename loop below prevents pushes to
+        # other codenames. RPM promotion should be skipped via SKIP_RPM_PUSH
+        # (RPMs have no codename concept); the RPM filter is set to a
+        # never-matching *resolute*.rpm as a defensive no-op. Anything already
+        # in the target pool/main is skipped by the dsc/deb duplicate-check
+        # below, so reruns are safe. Everything else is filtered out here.
+        # Remove this block when normal promotion resumes.
+        if [[ "\${_dsc_base}" != *_3.5.7-1* && "\${_dsc_base}" != *_0.8.3-1* ]]; then
+            echo "<*> [SKIP] \${_dsc_base} source push to major repo (only 3.5.7-1 and 0.8.3-1 DEB packages for the resolute codename are being promoted this run)"
+            continue
+        fi
+        EXISTING_DSC=\$(find \${MAJOR_REPOPATH}/pool/main -type f -name "\${_dsc_base}" 2>/dev/null | head -1)
         if [ -n "\${EXISTING_DSC}" ]; then
             echo "<*> Skipping \${SRCNAME} \${FULLVER} source push to major repo: dsc already in pool (\${EXISTING_DSC})"
             continue
@@ -219,6 +334,11 @@ if [ -n "\${DSC}" ]; then
         fi
         echo "<*> Pushing \${SRCNAME} \${FULLVER} source to major repo (not yet in pool)"
         for _codename in \${MAJOR_CODENAMES}; do
+            # TEMPORARY: only push to the resolute codename this run.
+            if [[ "\${_codename}" != resolute ]]; then
+                echo "<*> [SKIP] \${_dsc_base} source push to major repo for codename \${_codename} (only resolute is being promoted this run)"
+                continue
+            fi
             echo "<*> CODENAME: "\${_codename}
             repopush --gpg-pass=${SIGN_PASSWORD} --package=\${DSC_FILE} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose
             sleep 5
@@ -228,9 +348,40 @@ fi
 
 # -------------------------------------> binary pushing to major repo
 for _codename in \${MAJOR_CODENAMES}; do
+    # TEMPORARY: only push to the resolute codename this run.
+    if [[ "\${_codename}" != resolute ]]; then
+        echo "<*> [SKIP] binary push to major repo for codename \${_codename} (only resolute is being promoted this run)"
+        continue
+    fi
     echo "<*> CODENAME: "\${_codename}
     DEBS=\$(find \${REPOPATH}/pool/testing/ -type f -name "*\${_codename}*.*deb")
     for _deb in \${DEBS}; do
+        _deb_base=\$(basename \${_deb})
+        # TEMPORARY: only promote any *_3.5.7-1 or *_0.8.3-1 DEB packages for the
+        # resolute codename this run (both minor and major repos are targeted).
+        # The resolute-only guard on the codename loop below prevents pushes to
+        # other codenames. RPM promotion should be skipped via SKIP_RPM_PUSH
+        # (RPMs have no codename concept); the RPM filter is set to a
+        # never-matching *resolute*.rpm as a defensive no-op. Anything already
+        # in the target pool/main is skipped by the dsc/deb duplicate-check
+        # below, so reruns are safe. Everything else is filtered out here.
+        # Remove this block when normal promotion resumes.
+        if [[ "\${_deb_base}" != *_3.5.7-1* && "\${_deb_base}" != *_0.8.3-1* ]]; then
+            echo "<*> [SKIP] \${_deb_base} binary push to major repo (only 3.5.7-1 and 0.8.3-1 DEB packages for the resolute codename are being promoted this run)"
+            continue
+        fi
+        # Skip binaries already present in the major repo pool. Covers two
+        # cases: (a) a prior (possibly partial) run already pushed this exact
+        # file -- a re-push would be a no-op but wastes time; and (b) an older
+        # build with the same filename but different checksums is in pool/main
+        # and would make reprepro error out on hash mismatch. Codename is baked
+        # into every .deb filename (e.g. *.bullseye_amd64.deb), so a basename
+        # match in pool/main unambiguously means this codename's slot is filled.
+        EXISTING_DEB=\$(find \${MAJOR_REPOPATH}/pool/main -type f -name "\${_deb_base}" 2>/dev/null | head -1)
+        if [ -n "\${EXISTING_DEB}" ]; then
+            echo "<*> Skipping \${_deb_base} binary push to major repo: deb already in pool (\${EXISTING_DEB})"
+            continue
+        fi
         repopush --gpg-pass=${SIGN_PASSWORD} --package=\${_deb} --repo-path=\${MAJOR_REPOPATH} --component=main --codename=\${_codename} --verbose
     done
 done
