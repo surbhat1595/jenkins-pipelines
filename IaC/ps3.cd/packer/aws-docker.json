@@ -25,7 +25,7 @@
                 "sudo yum -y install java-1.8.0-openjdk git aws-cli docker",
                 "sudo sed -i 's^ExecStart=.*^ExecStart=/usr/bin/dockerd --data-root=/mnt/docker --default-ulimit nofile=900000:900000^' /usr/lib/systemd/system/docker.service",
                 "sudo mkdir -p /etc/docker",
-                "echo '{\"experimental\": true}' | sudo tee /etc/docker/daemon.json",
+                "echo '{\"experimental\": true, \"seccomp-profile\": \"unconfined\"}' | sudo tee /etc/docker/daemon.json",
                 "sudo usermod -aG docker ec2-user",
                 "sudo rm -rf /var/log/cloud-init*.log"
             ]

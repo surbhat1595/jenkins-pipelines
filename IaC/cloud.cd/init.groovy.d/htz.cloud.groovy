@@ -122,7 +122,9 @@ initMap['fedora-docker'] = '''#!/bin/bash -x
     sudo install -o root -g root -d /mnt/docker
     sudo usermod -aG docker $(id -u -n)
     sudo mkdir -p /etc/docker
-    echo '{"experimental": true, "ipv6": true, "fixed-cidr-v6": "fd3c:a8b0:18eb:5c06::/64"}' | sudo tee /etc/docker/daemon.json
+    # seccomp-profile unconfined: Ubuntu Resolute tar uses openat2; default Docker
+    # seccomp returns ENOSYS ("Function not implemented") during dpkg-source/tar extract.
+    echo '{"experimental": true, "ipv6": true, "fixed-cidr-v6": "fd3c:a8b0:18eb:5c06::/64", "seccomp-profile": "unconfined"}' | sudo tee /etc/docker/daemon.json
     sudo systemctl status docker || sudo systemctl start docker
 '''
 initMap['fedora42-x64-nbg1']     = initMap['fedora-docker']
