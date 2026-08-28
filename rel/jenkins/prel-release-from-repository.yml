@@ -1,0 +1,16 @@
+- job:
+    name: hetzner-PREL-release-from-repository
+    project-type: pipeline
+    description: |
+        Promote percona-release (PREL) packages to PREL/APT/YUM repo
+        Do not edit this job through the web!
+        Check repo.percona.com/index.html and update it if needed
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://github.com/surbhat1595/jenkins-pipelines.git
+            branches:
+              - 'PGhetzner'
+            wipe-workspace: false
+      lightweight-checkout: true
+      script-path: rel/jenkins/prel-release-from-repository.groovy
